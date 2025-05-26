@@ -12,7 +12,6 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-// NoticeRecipient.java (Intersection Entity)
 @Entity
 @Table(name = "notice_recipients")
 @Getter

@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-// User.java
 @Entity
 @Table(name = "users",
         indexes = {

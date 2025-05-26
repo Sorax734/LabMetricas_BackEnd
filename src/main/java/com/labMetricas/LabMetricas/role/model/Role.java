@@ -12,7 +12,6 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// Role.java
 @Entity
 @Table(name = "roles")
 @Getter
