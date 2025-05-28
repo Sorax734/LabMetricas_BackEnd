@@ -8,22 +8,21 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
 @Table(name = "roles")
-@Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
+@Setter
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", columnDefinition = "VARCHAR(50)", nullable = false, length = 50, unique = true)
+    @Column(nullable = false, unique = true)
     private String name;
 
     @Column(name = "deleted_at")
@@ -38,4 +37,8 @@ public class Role {
     @OneToMany(mappedBy = "role")
     @JsonIgnore
     private List<User> users;
+
+    public Role(String name) {
+        this.name = name;
+    }
 }
