@@ -4,6 +4,8 @@ import com.labMetricas.LabMetricas.enums.TypeResponse;
 import com.labMetricas.LabMetricas.security.dto.AuthRequest;
 import com.labMetricas.LabMetricas.util.ResponseObject;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +13,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class AuthController {
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -29,25 +31,42 @@ public class AuthController {
     @Autowired
     private JwtUtils jwtUtils;
 
+    @GetMapping("/test")
+    public ResponseEntity<String> test() {
+        return ResponseEntity.ok("El endpoint de prueba funciona correctamente");
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ResponseObject> login(@Valid @RequestBody AuthRequest request) {
         try {
+            logger.debug("Intento de login para el usuario: {}", request.getEmail());
+            
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            String jwt = jwtUtils.generateJwtToken((UserDetails) authentication.getPrincipal());
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String jwt = jwtUtils.generateJwtToken(userDetails);
+
+            logger.debug("Token generado exitosamente para el usuario: {}", request.getEmail());
 
             Map<String, Object> data = new HashMap<>();
             data.put("token", jwt);
             data.put("type", "Bearer");
+            data.put("email", userDetails.getUsername());
+            data.put("roles", userDetails.getAuthorities());
 
-            ResponseObject response = new ResponseObject("Login exitoso", data, TypeResponse.SUCCESS);
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            return ResponseEntity.ok(new ResponseObject("Login exitoso", data, TypeResponse.SUCCESS));
         } catch (BadCredentialsException e) {
-            ResponseObject response = new ResponseObject("Credenciales inválidas", TypeResponse.ERROR);
-            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+            logger.error("Error de autenticación para el usuario: {}", request.getEmail(), e);
+            return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(new ResponseObject("Credenciales inválidas", TypeResponse.ERROR));
+        } catch (Exception e) {
+            logger.error("Error inesperado durante el login: {}", e.getMessage(), e);
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseObject("Error interno del servidor", TypeResponse.ERROR));
         }
-    }
+    }   
 } 
