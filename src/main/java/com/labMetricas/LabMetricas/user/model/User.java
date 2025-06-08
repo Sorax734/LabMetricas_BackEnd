@@ -1,12 +1,13 @@
 package com.labMetricas.LabMetricas.user.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.labMetricas.LabMetricas.Company.model.Company;
+import com.labMetricas.LabMetricas.equipment.model.Equipment;
+import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
+import com.labMetricas.LabMetricas.role.model.Role;
 import com.labMetricas.LabMetricas.Notice.model.Notice;
 import com.labMetricas.LabMetricas.NoticeRecipient.model.NoticeRecipient;
 import com.labMetricas.LabMetricas.document.model.Document;
 import com.labMetricas.LabMetricas.passwordResetToken.model.PasswordResetToken;
-import com.labMetricas.LabMetricas.role.model.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,20 +17,19 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users",
-        indexes = {
-                @Index(name = "user_name_index", columnList = "name"),
-                @Index(name = "user_email_index", columnList = "email"),
-                @Index(name = "user_phone_index", columnList = "phone"),
-                @Index(name = "user_status_index", columnList = "status")
-        })
+@Table(name = "user", 
+    indexes = {
+        @Index(name = "user_name_index", columnList = "name"),
+        @Index(name = "user_email_index", columnList = "email"),
+        @Index(name = "user_phone_index", columnList = "phone"),
+        @Index(name = "user_status_index", columnList = "status")
+    })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -43,26 +43,17 @@ public class User implements UserDetails {
     @Column(name = "name", columnDefinition = "VARCHAR(50)", nullable = false, length = 50)
     private String name;
 
-    @Column(name = "lastname", columnDefinition = "VARCHAR(50)", nullable = false, length = 50)
-    private String lastname;
-
     @Column(name = "email", columnDefinition = "VARCHAR(50)", nullable = false, unique = true, length = 50)
     private String email;
 
     @Column(name = "password", columnDefinition = "VARCHAR(100)", nullable = false, length = 100)
     private String password;
 
+    @Column(name = "position", columnDefinition = "VARCHAR(50)", nullable = false, length = 50)
+    private String position;
+
     @Column(name = "phone", columnDefinition = "VARCHAR(10)", length = 10)
     private String phone;
-
-    @Column(name = "birth_date", columnDefinition = "DATE")
-    private LocalDate birthDate;
-
-    @Column(name = "company_name", columnDefinition = "VARCHAR(40)", length = 40)
-    private String companyName;
-
-    @Column(name = "residence", columnDefinition = "TINYTEXT")
-    private String residence;
 
     @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
     private Boolean status = true;
@@ -71,9 +62,13 @@ public class User implements UserDetails {
     @JoinColumn(name = "role_id")
     private Role role;
 
-    @ManyToOne
-    @JoinColumn(name = "company_id")
-    private Company company;
+    @OneToMany(mappedBy = "user")
+    @JsonIgnore
+    private List<Equipment> equipments;
+
+    @OneToMany(mappedBy = "responsible")
+    @JsonIgnore
+    private List<Maintenance> maintenances;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;

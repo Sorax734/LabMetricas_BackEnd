@@ -34,12 +34,10 @@ public class UserService {
                 var userData = new java.util.HashMap<String, Object>();
                 userData.put("id", user.getId());
                 userData.put("name", user.getName());
-                userData.put("lastname", user.getLastname());
                 userData.put("email", user.getEmail());
                 userData.put("phone", user.getPhone());
                 userData.put("status", user.getStatus());
                 userData.put("role", user.getRole().getName());
-                userData.put("companyName", user.getCompanyName());
                 return userData;
             })
             .collect(Collectors.toList());
