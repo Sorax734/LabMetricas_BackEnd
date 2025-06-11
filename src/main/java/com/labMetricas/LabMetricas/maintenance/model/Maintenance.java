@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "maintenance")
@@ -20,23 +21,23 @@ import java.util.List;
 @AllArgsConstructor
 public class Maintenance {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_maintenance")
-    private Integer id;
+    @GeneratedValue(generator = "UUID")
+    @Column(columnDefinition = "BINARY(16)")
+    private UUID id;
 
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
     private Boolean status = true;
 
-    @Column(name = "title", nullable = false, length = 100)
-    private String title;
-
-    @Column(name = "description", nullable = false, length = 1000)
+    @Column(name = "description", columnDefinition = "VARCHAR(1000)", length = 1000)
     private String description;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "code", columnDefinition = "VARCHAR(30)", nullable = false, length = 30, unique = true)
+    private String code;
+
+    @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
     @Column(name = "deleted_at")

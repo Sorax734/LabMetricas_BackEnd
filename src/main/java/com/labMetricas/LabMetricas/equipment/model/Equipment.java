@@ -18,7 +18,7 @@ import java.util.UUID;
     indexes = {
         @Index(name = "equipment_name_index", columnList = "name"),
         @Index(name = "equipment_status_index", columnList = "status"),
-        @Index(name = "equipment_location_index", columnList = "location")
+        //@Index(name = "equipment_location_index", columnList = "location")
     })
 @Getter
 @Setter
@@ -30,40 +30,50 @@ public class Equipment {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
     private Boolean status = true;
 
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "name", columnDefinition = "VARCHAR(100)", nullable = false, length = 100, unique = true)
     private String name;
 
-    @Column(name = "location", nullable = false, length = 100)
+    @Column(name = "code", columnDefinition = "VARCHAR(10)", nullable = false, length = 10)
+    private String code;
+
+    @Column(name = "serial_number", columnDefinition = "VARCHAR(24)", nullable = false, length = 24)
+    private String serialNumber;
+
+    @Column(name = "location", columnDefinition = "TINYTEXT", nullable = false)
     private String location;
 
-    @Column(name = "brand", length = 100)
+    @Column(name = "brand", columnDefinition = "VARCHAR(50)", nullable = false, length = 50)
     private String brand;
 
-    @Column(name = "model", length = 100)
+    @Column(name = "model", columnDefinition = "VARCHAR(100)", nullable = false, length = 100)
     private String model;
 
-    @Column(name = "remarks", length = 1000)
+    @Column(name = "remarks", columnDefinition = "VARCHAR(1000)", length = 1000)
     private String remarks;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "assigned_to", nullable = false)
+    private User assignedTo;
 
     @ManyToOne
-    @JoinColumn(name = "category_id", nullable = false)
-    private EquipmentCategory category;
+    @JoinColumn(name = "equipment_category", nullable = false)
+    private EquipmentCategory equipmentCategory;
+
+    @ManyToOne
+    @JoinColumn(name = "maintenance_provider", nullable = false)
+    private MaintenanceProvider maintenanceProvider;
 
     @OneToMany(mappedBy = "equipment")
     @JsonIgnore

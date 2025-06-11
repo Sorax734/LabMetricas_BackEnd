@@ -26,13 +26,13 @@ public class EquipmentCategory {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
     private Boolean status = true;
 
-    @Column(name = "name", nullable = false, length = 100, unique = true)
+    @Column(name = "name", columnDefinition = "VARCHAR(100)", nullable = false, unique = true, length = 100)
     private String name;
 
-    @OneToMany(mappedBy = "category")
+    @OneToMany(mappedBy = "equipmentCategory")
     @JsonIgnore
     private List<Equipment> equipments;
 } 

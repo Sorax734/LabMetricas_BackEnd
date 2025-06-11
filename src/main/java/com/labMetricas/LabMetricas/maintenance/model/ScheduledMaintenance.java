@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "scheduled_maintenance")
@@ -16,12 +17,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ScheduledMaintenance {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_scheduled_maintenance")
-    private Integer id;
+    @GeneratedValue(generator = "UUID")
+    @Column(columnDefinition = "BINARY(16)")
+    private UUID id;
 
-    @Column(name = "frecuency", nullable = false, length = 2)
-    private String frequency;
+    @Column(name = "monthly_frequency", columnDefinition = "TINYINT UNSIGNED", nullable = false)
+    private Short monthlyFrequency;
 
     @Column(name = "next_maintenance", nullable = false)
     private LocalDateTime nextMaintenance;

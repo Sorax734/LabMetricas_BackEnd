@@ -62,7 +62,7 @@ public class User implements UserDetails {
     @JoinColumn(name = "role_id")
     private Role role;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "assignedTo")
     @JsonIgnore
     private List<Equipment> equipments;
 

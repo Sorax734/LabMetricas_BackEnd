@@ -2,8 +2,10 @@ package com.labMetricas.LabMetricas.config;
 
 import com.labMetricas.LabMetricas.equipment.model.Equipment;
 import com.labMetricas.LabMetricas.equipment.model.EquipmentCategory;
+import com.labMetricas.LabMetricas.equipment.model.MaintenanceProvider;
 import com.labMetricas.LabMetricas.equipment.repository.EquipmentCategoryRepository;
 import com.labMetricas.LabMetricas.equipment.repository.EquipmentRepository;
+import com.labMetricas.LabMetricas.equipment.repository.MaintenanceProviderRepository;
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
 import com.labMetricas.LabMetricas.maintenance.model.MaintenanceType;
 import com.labMetricas.LabMetricas.maintenance.model.ScheduledMaintenance;
@@ -40,6 +42,9 @@ public class DataInitializer implements CommandLineRunner {
     private EquipmentCategoryRepository equipmentCategoryRepository;
 
     @Autowired
+    private MaintenanceProviderRepository maintenanceProviderRepository;
+
+    @Autowired
     private EquipmentRepository equipmentRepository;
 
     @Autowired
@@ -64,6 +69,8 @@ public class DataInitializer implements CommandLineRunner {
 
             // Create default users
             createDefaultUsers();
+
+            createMaintenanceProviders();
 
             // Initialize equipment categories
             createEquipmentCategories();
@@ -104,10 +111,27 @@ public class DataInitializer implements CommandLineRunner {
         });
     }
 
+    private void createMaintenanceProviders() {
+        List<String> maintenanceProviders = Arrays.asList(
+                "Lab Métricas SAS de CV"
+        );
+
+        maintenanceProviders.forEach(maintenanceProviderName -> {
+            if (!maintenanceProviderRepository.findByName(maintenanceProviderName).isPresent()) {
+                MaintenanceProvider maintenanceProvider = new MaintenanceProvider();
+                maintenanceProvider.setName(maintenanceProviderName);
+                maintenanceProvider.setStatus(true);
+                maintenanceProviderRepository.saveAndFlush(maintenanceProvider);
+                logger.info("Created maintenance provider: {}", maintenanceProviderName);
+            }
+        });
+    }
+
     private void createEquipment() {
         // Ensure we have users and categories first
         List<User> users = userRepository.findAll();
         List<EquipmentCategory> categories = equipmentCategoryRepository.findAll();
+        List<MaintenanceProvider> maintenanceProviders = maintenanceProviderRepository.findAll();
 
         if (!users.isEmpty() && !categories.isEmpty()) {
             String[] equipmentNames = {
@@ -129,14 +153,17 @@ public class DataInitializer implements CommandLineRunner {
                 equipment.setLocation("Main Facility - Zone " + (i % 3 + 1));
                 equipment.setBrand("TechPro");
                 equipment.setModel("Series " + (i + 1));
+                equipment.setCode("" + (i + 1));
+                equipment.setSerialNumber("Serie" + (i + 1));
                 equipment.setRemarks("High-precision equipment for industrial use");
                 equipment.setStatus(true);
                 equipment.setCreatedAt(LocalDateTime.now());
                 equipment.setUpdatedAt(LocalDateTime.now());
                 
                 // Cycle through users and categories
-                equipment.setUser(users.get(i % users.size()));
-                equipment.setCategory(categories.get(i % categories.size()));
+                equipment.setAssignedTo(users.get(i % users.size()));
+                equipment.setEquipmentCategory(categories.get(i % categories.size()));
+                equipment.setMaintenanceProvider(maintenanceProviders.get(i % maintenanceProviders.size()));
 
                 equipmentRepository.save(equipment);
                 logger.info("Created equipment: {}", equipmentNames[i]);
@@ -185,7 +212,7 @@ public class DataInitializer implements CommandLineRunner {
 
             for (int i = 0; i < maintenanceTitles.length; i++) {
                 Maintenance maintenance = new Maintenance();
-                maintenance.setTitle(maintenanceTitles[i]);
+                maintenance.setCode(maintenanceTitles[i]);
                 maintenance.setDescription("Detailed maintenance procedure for " + maintenanceTitles[i]);
                 maintenance.setStatus(true);
                 maintenance.setCreatedAt(LocalDateTime.now());
@@ -202,7 +229,7 @@ public class DataInitializer implements CommandLineRunner {
                 if (i % 3 == 0) {
                     ScheduledMaintenance scheduledMaintenance = new ScheduledMaintenance();
                     scheduledMaintenance.setMaintenance(savedMaintenance);
-                    scheduledMaintenance.setFrequency("6M"); // 6 months
+                    scheduledMaintenance.setMonthlyFrequency((short) 6); // 6 months
                     scheduledMaintenance.setNextMaintenance(LocalDateTime.now().plusMonths(6));
                     scheduledMaintenanceRepository.save(scheduledMaintenance);
                     logger.info("Created scheduled maintenance for: {}", maintenanceTitles[i]);
