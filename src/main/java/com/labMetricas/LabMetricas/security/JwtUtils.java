@@ -18,17 +18,18 @@ import java.util.Base64;
 public class JwtUtils {
     private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
-    @Value("${jwt.secret:labMetricasSecretKey12345678901234567890}")
+    @Value("${jwt_secret:labMetricasSecretKey12345678901234567890}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration:86400000}")
+    @Value("${jwt_expiration:86400000}")
     private int jwtExpirationMs;
 
     private Key key;
 
     private Key getSigningKey() {
         if (key == null) {
-            key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+            byte[] keyBytes = Base64.getDecoder().decode(jwtSecret);
+            key = Keys.hmacShaKeyFor(keyBytes);
         }
         return key;
     }

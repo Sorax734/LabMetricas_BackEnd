@@ -2,6 +2,8 @@ package com.labMetricas.LabMetricas.security;
 
 import com.labMetricas.LabMetricas.enums.TypeResponse;
 import com.labMetricas.LabMetricas.security.dto.AuthRequest;
+import com.labMetricas.LabMetricas.security.dto.PasswordResetRequest;
+import com.labMetricas.LabMetricas.security.dto.PasswordResetConfirmRequest;
 import com.labMetricas.LabMetricas.util.ResponseObject;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -34,6 +36,9 @@ public class AuthController {
 
     @Autowired
     private JwtUtils jwtUtils;
+
+    @Autowired
+    private PasswordResetService passwordResetService;
 
     @GetMapping("/test")
     public ResponseEntity<String> test() {
@@ -87,5 +92,84 @@ public class AuthController {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseObject("Ha ocurrido un error inesperado. Por favor, intenta más tarde.", TypeResponse.ERROR));
         }
-    }   
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ResponseObject> forgotPassword(@Valid @RequestBody PasswordResetRequest request) {
+        try {
+            boolean result = passwordResetService.initiatePasswordReset(request.getEmail());
+            
+            if (result) {
+                return ResponseEntity.ok(
+                    new ResponseObject("Password reset link sent to your email", null, TypeResponse.SUCCESS)
+                );
+            } else {
+                return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(new ResponseObject("No account found with this email", null, TypeResponse.ERROR));
+            }
+        } catch (Exception e) {
+            logger.error("Error during password reset initiation", e);
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseObject("An error occurred. Please try again later.", null, TypeResponse.ERROR));
+        }
+    }
+
+    @PostMapping("/validate-reset-token")
+    public ResponseEntity<ResponseObject> validateResetToken(@RequestParam String token) {
+        try {
+            boolean isValid = passwordResetService.validateResetToken(token);
+            
+            if (isValid) {
+                return ResponseEntity.ok(
+                    new ResponseObject("Token is valid", null, TypeResponse.SUCCESS)
+                );
+            } else {
+                return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new ResponseObject("Invalid or expired token", null, TypeResponse.ERROR));
+            }
+        } catch (Exception e) {
+            logger.error("Error validating reset token", e);
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseObject("An error occurred. Please try again later.", null, TypeResponse.ERROR));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ResponseObject> resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        try {
+            // First, validate the token
+            boolean isTokenValid = passwordResetService.validateResetToken(request.getToken());
+            
+            if (!isTokenValid) {
+                return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new ResponseObject("Invalid or expired token", null, TypeResponse.ERROR));
+            }
+
+            // If token is valid, proceed with password reset
+            boolean result = passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
+            
+            if (result) {
+                // Send confirmation email about successful password reset
+                passwordResetService.sendPasswordResetConfirmationEmail(request.getToken());
+                
+                return ResponseEntity.ok(
+                    new ResponseObject("Password reset successfully", null, TypeResponse.SUCCESS)
+                );
+            } else {
+                return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new ResponseObject("Failed to reset password", null, TypeResponse.ERROR));
+            }
+        } catch (Exception e) {
+            logger.error("Error during password reset confirmation", e);
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseObject("An error occurred. Please try again later.", null, TypeResponse.ERROR));
+        }
+    }
 } 

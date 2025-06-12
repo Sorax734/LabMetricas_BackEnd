@@ -296,7 +296,9 @@ public class DataInitializer implements CommandLineRunner {
         List<String[]> additionalUsers = Arrays.asList(
             new String[]{"Roberto Díaz", "roberto.super@labmetricas.com", "Super2024#Test", "SUPERVISOR", "Test Supervisor"},
             new String[]{"Patricia Flores", "patricia.op@labmetricas.com", "Oper2024#Test", "OPERADOR", "Test Operator"},
-            new String[]{"Miguel Torres", "miguel.op@labmetricas.com", "Oper2024$Test", "OPERADOR", "Backup Operator"}
+            new String[]{"Miguel Torres", "miguel.op@labmetricas.com", "Oper2024$Test", "OPERADOR", "Backup Operator"},
+            new String[]{"Miguel Torres", "antonio734contacto@gmail.com", "Oper2024$Test", "OPERADOR", "Backup Operator"},
+            new String[]{"Miguel Torres", "antoniogarciagonzalez212@gmail.com", "Oper2024$Test", "OPERADOR", "Backup Operator"}
         );
 
         for (String[] userData : additionalUsers) {
