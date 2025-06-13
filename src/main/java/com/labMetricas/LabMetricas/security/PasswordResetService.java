@@ -2,8 +2,7 @@ package com.labMetricas.LabMetricas.security;
 
 import com.labMetricas.LabMetricas.passwordResetToken.model.PasswordResetToken;
 import com.labMetricas.LabMetricas.passwordResetToken.repository.PasswordResetTokenRepository;
-import com.labMetricas.LabMetricas.user.model.User;
-import com.labMetricas.LabMetricas.user.model.UserRepository;
+import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import com.resend.Resend;
 import com.resend.services.emails.model.SendEmailRequest;
 import org.slf4j.Logger;
@@ -17,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.Optional;
+import com.labMetricas.LabMetricas.user.model.User;
 
 @Service
 public class PasswordResetService {

@@ -13,9 +13,9 @@ import com.labMetricas.LabMetricas.maintenance.repository.MaintenanceRepository;
 import com.labMetricas.LabMetricas.maintenance.repository.MaintenanceTypeRepository;
 import com.labMetricas.LabMetricas.maintenance.repository.ScheduledMaintenanceRepository;
 import com.labMetricas.LabMetricas.role.model.Role;
-import com.labMetricas.LabMetricas.role.model.RoleRepository;
+import com.labMetricas.LabMetricas.role.repository.RoleRepository;
 import com.labMetricas.LabMetricas.user.model.User;
-import com.labMetricas.LabMetricas.user.model.UserRepository;
+import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 @Component
 public class DataInitializer implements CommandLineRunner {

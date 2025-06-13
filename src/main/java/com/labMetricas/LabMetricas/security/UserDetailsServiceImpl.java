@@ -1,6 +1,6 @@
 package com.labMetricas.LabMetricas.security;
 
-import com.labMetricas.LabMetricas.user.model.UserRepository;
+import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

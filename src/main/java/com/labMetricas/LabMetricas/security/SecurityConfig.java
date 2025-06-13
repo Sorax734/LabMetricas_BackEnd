@@ -76,8 +76,11 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 
-                // Endpoints específicos para ADMIN
-                .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                // User change password endpoint for all authenticated users
+                .requestMatchers("/api/admin/users/change-password").authenticated()
+                
+                // Admin-only user management endpoints
+                .requestMatchers("/api/admin/users/**").hasAuthority("ADMIN")
                 
                 // Endpoints específicos para SUPERVISOR
                 .requestMatchers("/api/supervisor/**").hasAnyAuthority("ADMIN", "SUPERVISOR")

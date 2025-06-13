@@ -28,8 +28,7 @@ public class JwtUtils {
 
     private Key getSigningKey() {
         if (key == null) {
-            byte[] keyBytes = Base64.getDecoder().decode(jwtSecret);
-            key = Keys.hmacShaKeyFor(keyBytes);
+            key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
         }
         return key;
     }
@@ -59,18 +58,10 @@ public class JwtUtils {
                     .build()
                     .parseClaimsJws(authToken);
             return true;
-        } catch (SecurityException e) {
-            logger.error("Invalid JWT signature: {}", e.getMessage());
-        } catch (MalformedJwtException e) {
-            logger.error("Invalid JWT token: {}", e.getMessage());
-        } catch (ExpiredJwtException e) {
-            logger.error("JWT token is expired: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            logger.error("JWT token is unsupported: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            logger.error("JWT claims string is empty: {}", e.getMessage());
+        } catch (Exception e) {
+            logger.error("JWT validation error: {}", e.getMessage());
+            return false;
         }
-        return false;
     }
 
     public String parseJwt(HttpServletRequest request) {
