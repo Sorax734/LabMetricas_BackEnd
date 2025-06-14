@@ -52,16 +52,11 @@ public class JwtUtils {
     }
 
     public boolean validateJwtToken(String authToken) {
-        try {
-            Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(authToken);
-            return true;
-        } catch (Exception e) {
-            logger.error("JWT validation error: {}", e.getMessage());
-            return false;
-        }
+        Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(authToken);
+        return true;
     }
 
     public String parseJwt(HttpServletRequest request) {

@@ -24,7 +24,7 @@ public class ScheduledMaintenance {
     @Column(name = "monthly_frequency", columnDefinition = "TINYINT UNSIGNED", nullable = false)
     private Short monthlyFrequency;
 
-    @Column(name = "next_maintenance", nullable = false)
+    @Column(name = "next_maintenance", columnDefinition = "TIMESTAMP", nullable = false)
     private LocalDateTime nextMaintenance;
 
     @OneToOne
