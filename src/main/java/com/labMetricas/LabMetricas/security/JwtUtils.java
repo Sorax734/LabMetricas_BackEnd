@@ -26,7 +26,7 @@ public class JwtUtils {
 
     private Key key;
 
-    private Key getSigningKey() {
+    public Key getSigningKey() {
         if (key == null) {
             key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
         }
@@ -52,11 +52,16 @@ public class JwtUtils {
     }
 
     public boolean validateJwtToken(String authToken) {
-        Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(authToken);
-        return true;
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(authToken);
+            return true;
+        } catch (Exception e) {
+            logger.error("JWT validation error: {}", e.getMessage());
+            return false;
+        }
     }
 
     public String parseJwt(HttpServletRequest request) {

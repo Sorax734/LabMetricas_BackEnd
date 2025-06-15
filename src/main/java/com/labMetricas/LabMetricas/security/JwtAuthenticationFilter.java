@@ -2,6 +2,7 @@ package com.labMetricas.LabMetricas.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,7 +36,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = jwtUtils.parseJwt(request);
             if (jwt != null) {
-                jwtUtils.validateJwtToken(jwt);
+                try {
+                    Jwts.parserBuilder()
+                            .setSigningKey(jwtUtils.getSigningKey())
+                            .build()
+                            .parseClaimsJws(jwt);
+                }  catch (ExpiredJwtException e) {
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+                    final Map<String,Object> body = new HashMap<>();
+                    body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
+                    body.put("error", "Unauthorized");
+                    body.put("message", e.getMessage());
+                    body.put("path", request.getServletPath());
+
+                    final ObjectMapper mapper = new ObjectMapper();
+                    mapper.writeValue(response.getOutputStream(), body);
+
+                    return;
+                } catch (Exception e) {
+                    logger.error("JWT validation error: {}", e);
+                }
 
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
 
@@ -46,23 +68,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-
-            filterChain.doFilter(request, response);
-
-        } catch (ExpiredJwtException e) {
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-
-            final Map<String,Object> body = new HashMap<>();
-            body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
-            body.put("error", "Unauthorized");
-            body.put("message", e.getMessage());
-            body.put("path", request.getServletPath());
-
-            final ObjectMapper mapper = new ObjectMapper();
-            mapper.writeValue(response.getOutputStream(), body);
         } catch (Exception e) {
             logger.error("Cannot set user authentication: {}", e);
         }
+
+        filterChain.doFilter(request, response);
     }
 } 
