@@ -4,6 +4,9 @@ import com.labMetricas.LabMetricas.enums.TypeResponse;
 import com.labMetricas.LabMetricas.security.dto.AuthRequest;
 import com.labMetricas.LabMetricas.security.dto.PasswordResetRequest;
 import com.labMetricas.LabMetricas.security.dto.PasswordResetConfirmRequest;
+import com.labMetricas.LabMetricas.user.dto.UserDetailsDto;
+import com.labMetricas.LabMetricas.user.model.User;
+import com.labMetricas.LabMetricas.user.service.UserService;
 import com.labMetricas.LabMetricas.util.ResponseObject;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -38,6 +41,9 @@ public class AuthController {
     private JwtUtils jwtUtils;
 
     @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
+    @Autowired
     private PasswordResetService passwordResetService;
 
     @GetMapping("/test")
@@ -57,12 +63,16 @@ public class AuthController {
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             String jwt = jwtUtils.generateJwtToken(userDetails);
 
+            // Fetch full user details
+            User user = (User) userDetailsService.loadUserByUsername(request.getEmail());
+            UserDetailsDto userInfo = new UserDetailsDto(user);
+
             logger.debug("Token generado exitosamente para el usuario: {}", request.getEmail());
 
             Map<String, Object> data = new HashMap<>();
             data.put("token", jwt);
             data.put("type", "Bearer");
-            data.put("email", userDetails.getUsername());
+            data.put("user", userInfo);
             data.put("roles", userDetails.getAuthorities());
 
             return ResponseEntity.ok(new ResponseObject("Login exitoso", data, TypeResponse.SUCCESS));
