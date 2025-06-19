@@ -250,6 +250,12 @@ public class UserService {
         }
     }
 
+    // Method to find user by email
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
+
     // Helper method to convert User to UserDto
     private UserDto convertToDto(User user) {
         UserDto dto = new UserDto();

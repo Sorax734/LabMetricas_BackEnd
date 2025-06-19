@@ -1,6 +1,8 @@
 package com.labMetricas.LabMetricas.user.controller;
 
 import com.labMetricas.LabMetricas.enums.TypeResponse;
+import com.labMetricas.LabMetricas.user.dto.UserDetailsDto;
+import com.labMetricas.LabMetricas.user.model.User;
 import com.labMetricas.LabMetricas.user.model.dto.ChangePasswordDto;
 import com.labMetricas.LabMetricas.user.model.dto.UserDto;
 import com.labMetricas.LabMetricas.user.service.UserService;
@@ -16,10 +18,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/admin/users")
+@RequestMapping("/api/users")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
@@ -29,6 +32,33 @@ public class UserController {
     // Constructor injection
     public UserController(UserService userService) {
         this.userService = userService;
+    }
+
+    // Profile endpoint for all authenticated users
+    @GetMapping("/profile")
+    public ResponseEntity<ResponseObject> getUserProfile() {
+        try {
+            // Get current authentication
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            
+            // Log the profile request
+            logger.info("Profile request for user: {}", auth.getName());
+            
+            // Retrieve and convert user details
+            User currentUser = userService.findByEmail(auth.getName());
+            UserDetailsDto userProfile = new UserDetailsDto(currentUser);
+            
+            // Return successful response
+            return ResponseEntity.ok(
+                new ResponseObject("Profile details retrieved successfully", userProfile, TypeResponse.SUCCESS)
+            );
+        } catch (Exception e) {
+            // Log and handle any errors
+            logger.error("Error retrieving profile: {}", e.getMessage());
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseObject("Error retrieving profile details", null, TypeResponse.ERROR));
+        }
     }
 
     @PostMapping
