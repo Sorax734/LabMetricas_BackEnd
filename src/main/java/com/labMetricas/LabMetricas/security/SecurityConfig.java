@@ -78,7 +78,10 @@ public class SecurityConfig {
                 
                 // User profile and change password endpoint for all authenticated users
                 .requestMatchers("/api/users/profile").authenticated()
-                .requestMatchers("/api/admin/users/change-password").authenticated()
+                .requestMatchers("/api/users/change-password").authenticated()
+                
+                // Customer endpoints for ADMIN, SUPERVISOR, and OPERADOR
+                .requestMatchers("/api/customers/**").hasAnyAuthority("ADMIN", "SUPERVISOR", "OPERADOR")
                 
                 // Admin-only user management endpoints
                 .requestMatchers("/api/admin/users/**").hasAuthority("ADMIN")
