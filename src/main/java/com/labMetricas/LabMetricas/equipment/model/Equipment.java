@@ -1,6 +1,8 @@
 package com.labMetricas.LabMetricas.equipment.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.labMetricas.LabMetricas.EquipmentCategory.model.EquipmentCategory;
+import com.labMetricas.LabMetricas.MaintenanceProvider.model.MaintenanceProvider;
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
 import com.labMetricas.LabMetricas.user.model.User;
 import jakarta.persistence.*;

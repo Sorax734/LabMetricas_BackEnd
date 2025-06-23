@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface MaintenanceTypeRepository extends JpaRepository<MaintenanceType, UUID> {
     Optional<MaintenanceType> findByName(String name);
+    Optional<MaintenanceType> findByNameIgnoreCase(String name);
 } 

@@ -1,11 +1,11 @@
 package com.labMetricas.LabMetricas.config;
 
+import com.labMetricas.LabMetricas.EquipmentCategory.model.EquipmentCategory;
+import com.labMetricas.LabMetricas.EquipmentCategory.repository.EquipmentCategoryRepository;
+import com.labMetricas.LabMetricas.MaintenanceProvider.model.MaintenanceProvider;
+import com.labMetricas.LabMetricas.MaintenanceProvider.repository.MaintenanceProviderRepository;
 import com.labMetricas.LabMetricas.equipment.model.Equipment;
-import com.labMetricas.LabMetricas.equipment.model.EquipmentCategory;
-import com.labMetricas.LabMetricas.equipment.model.MaintenanceProvider;
-import com.labMetricas.LabMetricas.equipment.repository.EquipmentCategoryRepository;
 import com.labMetricas.LabMetricas.equipment.repository.EquipmentRepository;
-import com.labMetricas.LabMetricas.equipment.repository.MaintenanceProviderRepository;
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
 import com.labMetricas.LabMetricas.maintenance.model.MaintenanceType;
 import com.labMetricas.LabMetricas.maintenance.model.ScheduledMaintenance;
@@ -102,7 +102,7 @@ public class DataInitializer implements CommandLineRunner {
         );
 
         categories.forEach(categoryName -> {
-            if (!equipmentCategoryRepository.findByName(categoryName).isPresent()) {
+            if (!equipmentCategoryRepository.findByNameIgnoreCase(categoryName).isPresent()) {
                 EquipmentCategory category = new EquipmentCategory();
                 category.setName(categoryName);
                 category.setStatus(true);
@@ -118,11 +118,11 @@ public class DataInitializer implements CommandLineRunner {
         );
 
         maintenanceProviders.forEach(maintenanceProviderName -> {
-            if (!maintenanceProviderRepository.findByName(maintenanceProviderName).isPresent()) {
+            if (!maintenanceProviderRepository.findByNameIgnoreCase(maintenanceProviderName).isPresent()) {
                 MaintenanceProvider maintenanceProvider = new MaintenanceProvider();
                 maintenanceProvider.setName(maintenanceProviderName);
                 maintenanceProvider.setStatus(true);
-                maintenanceProviderRepository.saveAndFlush(maintenanceProvider);
+                maintenanceProviderRepository.save(maintenanceProvider);
                 logger.info("Created maintenance provider: {}", maintenanceProviderName);
             }
         });
@@ -182,7 +182,7 @@ public class DataInitializer implements CommandLineRunner {
         );
 
         maintenanceTypes.forEach(typeName -> {
-            if (!maintenanceTypeRepository.findByName(typeName).isPresent()) {
+            if (!maintenanceTypeRepository.findByNameIgnoreCase(typeName).isPresent()) {
                 MaintenanceType type = new MaintenanceType();
                 type.setName(typeName);
                 type.setStatus(true);

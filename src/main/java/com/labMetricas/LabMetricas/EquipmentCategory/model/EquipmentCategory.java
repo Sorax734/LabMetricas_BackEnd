@@ -1,6 +1,8 @@
-package com.labMetricas.LabMetricas.equipment.model;
+package com.labMetricas.LabMetricas.EquipmentCategory.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.labMetricas.LabMetricas.equipment.model.Equipment;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,16 +13,16 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "maintenance_provider",
-        indexes = {
-                @Index(name = "maintenance_provider_name_index", columnList = "name"),
-                @Index(name = "maintenance_provider_status_index", columnList = "status")
-        })
+@Table(name = "equipment_category", 
+    indexes = {
+        @Index(name = "equipment_category_name_index", columnList = "name"),
+        @Index(name = "equipment_category_status_index", columnList = "status")
+    })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class MaintenanceProvider {
+public class EquipmentCategory {
     @Id
     @GeneratedValue(generator = "UUID")
     @Column(columnDefinition = "BINARY(16)")
@@ -29,10 +31,10 @@ public class MaintenanceProvider {
     @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
     private Boolean status = true;
 
-    @Column(name = "name", columnDefinition = "VARCHAR(50)", nullable = false, unique = true, length = 50)
+    @Column(name = "name", columnDefinition = "VARCHAR(100)", nullable = false, unique = true, length = 100)
     private String name;
 
-    @OneToMany(mappedBy = "maintenanceProvider")
+    @OneToMany(mappedBy = "equipmentCategory")
     @JsonIgnore
     private List<Equipment> equipments;
-}
+} 
