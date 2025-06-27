@@ -43,6 +43,10 @@ public class Maintenance {
     @Column(name = "deleted_at", columnDefinition = "TIMESTAMP")
     private LocalDateTime deletedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", columnDefinition = "ENUM('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')")
+    private Priority priority = Priority.MEDIUM;
+
     @ManyToOne
     @JoinColumn(name = "maintenance_type", nullable = false)
     private MaintenanceType maintenanceType;
@@ -58,4 +62,9 @@ public class Maintenance {
     @OneToOne(mappedBy = "maintenance")
     @JsonIgnore
     private ScheduledMaintenance scheduledMaintenance;
+
+    // Priority enum
+    public enum Priority {
+        LOW, MEDIUM, HIGH, CRITICAL
+    }
 } 

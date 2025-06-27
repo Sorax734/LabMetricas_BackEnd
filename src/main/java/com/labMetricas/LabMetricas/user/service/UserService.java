@@ -94,6 +94,7 @@ public class UserService {
             existingUser.setPosition(userDto.getPosition());
             existingUser.setPhone(userDto.getPhone());
             existingUser.setStatus(userDto.getStatus());
+        
             
             // Update role if changed
             if (!existingUser.getRole().getId().equals(userDto.getRoleId())) {

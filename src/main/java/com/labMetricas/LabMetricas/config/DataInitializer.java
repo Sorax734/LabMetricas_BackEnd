@@ -16,12 +16,14 @@ import com.labMetricas.LabMetricas.role.model.Role;
 import com.labMetricas.LabMetricas.role.repository.RoleRepository;
 import com.labMetricas.LabMetricas.user.model.User;
 import com.labMetricas.LabMetricas.user.repository.UserRepository;
+import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceRequestDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.persistence.EntityNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -173,23 +175,41 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createMaintenanceTypes() {
-        List<String> maintenanceTypes = Arrays.asList(
-            "Preventive", 
-            "Corrective", 
-            "Predictive", 
-            "Routine", 
-            "Emergency"
+        List<MaintenanceTypeConfig> maintenanceTypes = Arrays.asList(
+            new MaintenanceTypeConfig("Preventive", true, false, false),
+            new MaintenanceTypeConfig("Corrective", false, true, false),
+            new MaintenanceTypeConfig("Predictive", false, false, true),
+            new MaintenanceTypeConfig("Routine", true, false, false),
+            new MaintenanceTypeConfig("Emergency", false, true, false)
         );
 
-        maintenanceTypes.forEach(typeName -> {
-            if (!maintenanceTypeRepository.findByNameIgnoreCase(typeName).isPresent()) {
-                MaintenanceType type = new MaintenanceType();
-                type.setName(typeName);
-                type.setStatus(true);
+        maintenanceTypes.forEach(config -> {
+            if (!maintenanceTypeRepository.findByNameIgnoreCase(config.name).isPresent()) {
+                MaintenanceType type = new MaintenanceType(
+                    config.name, 
+                    "Standard " + config.name + " maintenance type", 
+                    config.isPreventive, 
+                    config.isCorrective, 
+                    config.isCalibration
+                );
                 maintenanceTypeRepository.save(type);
-                logger.info("Created maintenance type: {}", typeName);
+                logger.info("Created maintenance type: {}", config.name);
             }
         });
+    }
+
+    private static class MaintenanceTypeConfig {
+        String name;
+        boolean isPreventive;
+        boolean isCorrective;
+        boolean isCalibration;
+
+        MaintenanceTypeConfig(String name, boolean isPreventive, boolean isCorrective, boolean isCalibration) {
+            this.name = name;
+            this.isPreventive = isPreventive;
+            this.isCorrective = isCorrective;
+            this.isCalibration = isCalibration;
+        }
     }
 
     private void createMaintenances() {
@@ -198,47 +218,92 @@ public class DataInitializer implements CommandLineRunner {
         List<MaintenanceType> maintenanceTypes = maintenanceTypeRepository.findAll();
 
         if (!users.isEmpty() && !equipments.isEmpty() && !maintenanceTypes.isEmpty()) {
-            String[] maintenanceTitles = {
-                "Annual Calibration", 
-                "Bearing Replacement", 
-                "Software Update", 
-                "Electrical System Check", 
-                "Lubrication Service",
-                "Safety Inspection",
-                "Performance Optimization",
-                "Component Replacement",
-                "Diagnostic Scan",
-                "Comprehensive Overhaul"
+            // Example maintenance requests with different priorities and types
+            MaintenanceRequestDto[] maintenanceRequests = {
+                createMaintenanceRequestDto(
+                    equipments.get(0), 
+                    maintenanceTypes.get(0), 
+                    users.get(0), 
+                    "Routine calibration for precision equipment", 
+                    MaintenanceRequestDto.Priority.LOW
+                ),
+                createMaintenanceRequestDto(
+                    equipments.get(1), 
+                    maintenanceTypes.get(1), 
+                    users.get(1), 
+                    "Urgent bearing replacement needed", 
+                    MaintenanceRequestDto.Priority.HIGH
+                ),
+                createMaintenanceRequestDto(
+                    equipments.get(2), 
+                    maintenanceTypes.get(2), 
+                    users.get(2), 
+                    "Predictive maintenance for industrial laser cutter", 
+                    MaintenanceRequestDto.Priority.MEDIUM
+                ),
+                createMaintenanceRequestDto(
+                    equipments.get(3), 
+                    maintenanceTypes.get(3), 
+                    users.get(3), 
+                    "Regular maintenance check for spectrophotometer", 
+                    MaintenanceRequestDto.Priority.LOW
+                ),
+                createMaintenanceRequestDto(
+                    equipments.get(4), 
+                    maintenanceTypes.get(4), 
+                    users.get(4), 
+                    "Emergency repair for critical safety equipment", 
+                    MaintenanceRequestDto.Priority.CRITICAL
+                )
             };
 
-            for (int i = 0; i < maintenanceTitles.length; i++) {
-                Maintenance maintenance = new Maintenance();
-                maintenance.setCode(maintenanceTitles[i]);
-                maintenance.setDescription("Detailed maintenance procedure for " + maintenanceTitles[i]);
-                maintenance.setStatus(true);
-                maintenance.setCreatedAt(LocalDateTime.now());
-                maintenance.setUpdatedAt(LocalDateTime.now());
-                
-                // Cycle through users, equipments, and maintenance types
-                maintenance.setResponsible(users.get(i % users.size()));
-                maintenance.setEquipment(equipments.get(i % equipments.size()));
-                maintenance.setMaintenanceType(maintenanceTypes.get(i % maintenanceTypes.size()));
+            // Simulate maintenance request creation
+            for (MaintenanceRequestDto requestDto : maintenanceRequests) {
+                try {
+                    // Find the current user to simulate request creation
+                    User currentUser = userRepository.findByEmail(requestDto.getResponsibleUserId().toString())
+                        .orElse(users.get(0));
 
-                Maintenance savedMaintenance = maintenanceRepository.save(maintenance);
+                    // Create maintenance request
+                    Maintenance maintenance = new Maintenance();
+                    maintenance.setDescription(requestDto.getDescription());
+                    maintenance.setEquipment(equipmentRepository.findById(requestDto.getEquipmentId())
+                        .orElseThrow(() -> new EntityNotFoundException("Equipment not found")));
+                    maintenance.setMaintenanceType(maintenanceTypeRepository.findById(requestDto.getMaintenanceTypeId())
+                        .orElseThrow(() -> new EntityNotFoundException("Maintenance Type not found")));
+                    maintenance.setResponsible(currentUser);
+                    maintenance.setCode(generateMaintenanceCode());
+                    maintenance.setCreatedAt(LocalDateTime.now());
+                    maintenance.setStatus(true);
+                    maintenance.setPriority(Maintenance.Priority.valueOf(requestDto.getPriority().name()));
 
-                // Create a scheduled maintenance for some maintenances
-                if (i % 3 == 0) {
-                    ScheduledMaintenance scheduledMaintenance = new ScheduledMaintenance();
-                    scheduledMaintenance.setMaintenance(savedMaintenance);
-                    scheduledMaintenance.setMonthlyFrequency((short) 6); // 6 months
-                    scheduledMaintenance.setNextMaintenance(LocalDateTime.now().plusMonths(6));
-                    scheduledMaintenanceRepository.save(scheduledMaintenance);
-                    logger.info("Created scheduled maintenance for: {}", maintenanceTitles[i]);
+                    maintenanceRepository.save(maintenance);
+                    logger.info("Created sample maintenance request: {}", maintenance.getCode());
+                } catch (Exception e) {
+                    logger.error("Error creating sample maintenance request", e);
                 }
-
-                logger.info("Created maintenance: {}", maintenanceTitles[i]);
             }
         }
+    }
+
+    private MaintenanceRequestDto createMaintenanceRequestDto(
+        Equipment equipment, 
+        MaintenanceType maintenanceType, 
+        User responsible, 
+        String description, 
+        MaintenanceRequestDto.Priority priority
+    ) {
+        MaintenanceRequestDto dto = new MaintenanceRequestDto();
+        dto.setEquipmentId(equipment.getId());
+        dto.setMaintenanceTypeId(maintenanceType.getId());
+        dto.setResponsibleUserId(responsible.getId());
+        dto.setDescription(description);
+        dto.setPriority(priority);
+        return dto;
+    }
+
+    private String generateMaintenanceCode() {
+        return "MAINT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
     private void createDefaultUsers() {

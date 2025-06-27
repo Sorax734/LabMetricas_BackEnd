@@ -92,6 +92,12 @@ public class SecurityConfig {
                 // Endpoints específicos para OPERADOR
                 .requestMatchers("/api/operador/**").hasAnyAuthority("ADMIN", "SUPERVISOR", "OPERADOR")
                 
+                // Maintenance endpoints for SUPERVISOR and ADMIN
+                .requestMatchers("/api/maintenance/init-data").hasAnyAuthority("ADMIN", "SUPERVISOR", "OPERADOR")
+                .requestMatchers("/api/maintenance/create").hasAnyAuthority("ADMIN", "SUPERVISOR", "OPERADOR")
+                .requestMatchers("/api/maintenance/update-status/**").hasAnyAuthority("ADMIN", "SUPERVISOR")
+                .requestMatchers("/api/maintenance/list").hasAnyAuthority("ADMIN", "SUPERVISOR")
+                
                 // Cualquier otra solicitud requiere autenticación
                 .anyRequest().authenticated()
             );
