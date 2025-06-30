@@ -7,5 +7,4 @@ import java.util.UUID;
 
 @Repository
 public interface EquipmentRepository extends JpaRepository<Equipment, UUID> {
-    // Custom query methods can be added here if needed
 } 
