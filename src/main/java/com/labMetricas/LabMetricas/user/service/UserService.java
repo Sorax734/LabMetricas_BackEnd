@@ -7,10 +7,13 @@ import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import com.labMetricas.LabMetricas.user.model.dto.ChangePasswordDto;
 import com.labMetricas.LabMetricas.user.model.dto.UserDto;
 import com.labMetricas.LabMetricas.util.ResponseObject;
+import com.resend.Resend;
+import com.resend.services.emails.model.SendEmailRequest;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -36,6 +39,84 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private Resend resend;
+
+    @Value("${resend.default.sender}")
+    private String defaultSender;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
+
+    // Method to generate a secure password
+    private String generateSecurePassword() {
+        // Generate a password with at least 8 characters, including:
+        // - An uppercase letter
+        // - A special character
+        // - Remaining characters can be mixed
+        String uppercaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String specialCharacters = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+        String allCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" + specialCharacters;
+
+        StringBuilder password = new StringBuilder();
+
+        // Add one uppercase letter
+        password.append(uppercaseLetters.charAt((int) (Math.random() * uppercaseLetters.length())));
+
+        // Add one special character
+        password.append(specialCharacters.charAt((int) (Math.random() * specialCharacters.length())));
+
+        // Fill the rest of the password to make it at least 8 characters long
+        while (password.length() < 8) {
+            password.append(allCharacters.charAt((int) (Math.random() * allCharacters.length())));
+        }
+
+        return password.toString();
+    }
+
+    // Method to send welcome email with temporary password
+    private void sendWelcomeEmail(String email, String temporaryPassword, String name) {
+        try {
+            // Create a stylish, informative welcome email
+            SendEmailRequest sendEmailRequest = SendEmailRequest.builder()
+                .from(defaultSender)
+                .to(email)
+                .subject("Bienvenido a LabMetricas - Tus Credenciales de Acceso")
+                .html(buildWelcomeEmailBody(name, email, temporaryPassword))
+                .build();
+
+            resend.emails().send(sendEmailRequest);
+            logger.info("Welcome email sent to: {}", email);
+        } catch (Exception e) {
+            logger.error("Failed to send welcome email to: {}", email, e);
+        }
+    }
+
+    // Helper method to build a stylish welcome email body
+    private String buildWelcomeEmailBody(String name, String email, String temporaryPassword) {
+        return String.format(
+            "<html>" +
+            "<body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;'>" +
+            "    <div style='background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 30px;'>" +
+            "        <h1 style='color: #2c3e50; text-align: center;'>¡Bienvenido a LabMetricas!</h1>" +
+            "        <p style='color: #34495e; line-height: 1.6;'>Estimado/a <strong>%s</strong>,</p>" +
+            "        <div style='background-color: #ecf0f1; border-left: 5px solid #3498db; padding: 15px; margin: 20px 0;'>" +
+            "            <h2 style='color: #2980b9; margin-top: 0;'>Tus Claves de Acceso</h2>" +
+            "            <p style='margin: 10px 0;'><strong>Correo Electrónico:</strong> <span style='color: #2c3e50;'>%s</span></p>" +
+            "            <p style='margin: 10px 0;'><strong>Contraseña Temporal:</strong> <span style='color: #e74c3c; font-family: monospace;'>%s</span></p>" +
+            "        </div>" +
+            "        <p style='color: #34495e; line-height: 1.6;'>Por razones de seguridad, te recomendamos cambiar tu contraseña después de tu primer inicio de sesión.</p>" +
+            "        <div style='text-align: center; margin-top: 30px;'>" +
+            "            <a href='%s' style='background-color: #3498db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Iniciar Sesión</a>" +
+            "        </div>" +
+            "        <p style='color: #7f8c8d; font-size: 0.9em; text-align: center; margin-top: 20px;'>Si no solicitaste esta cuenta, por favor contacta con soporte.</p>" +
+            "    </div>" +
+            "</body>" +
+            "</html>", 
+            name, email, temporaryPassword, frontendUrl
+        );
+    }
+
     @Transactional
     public ResponseEntity<ResponseObject> createUser(UserDto userDto) {
         try {
@@ -58,8 +139,13 @@ public class UserService {
             user.setRole(roleRepository.findById(userDto.getRoleId())
                 .orElseThrow(() -> new RuntimeException("Role not found")));
 
+            // Generate or use provided password
+            String rawPassword = userDto.getPassword() != null && !userDto.getPassword().isEmpty() 
+                ? userDto.getPassword() 
+                : generateSecurePassword();
+
             // Encode password
-            user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+            user.setPassword(passwordEncoder.encode(rawPassword));
             
             // Set timestamps
             user.setCreatedAt(LocalDateTime.now());
@@ -70,6 +156,12 @@ public class UserService {
 
             // Convert to DTO for response
             UserDto responseDto = convertToDto(savedUser);
+
+            // Always set the temporary password in the response
+            responseDto.setTemporaryPassword(rawPassword);
+
+            // Send welcome email with temporary password
+            sendWelcomeEmail(savedUser.getEmail(), rawPassword, savedUser.getName());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(
                 new ResponseObject("User created successfully", responseDto, TypeResponse.SUCCESS)

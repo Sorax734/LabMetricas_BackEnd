@@ -38,4 +38,6 @@ public class UserDto {
     private Long roleId;
 
     private String password;
+
+    private String temporaryPassword;
 } 
