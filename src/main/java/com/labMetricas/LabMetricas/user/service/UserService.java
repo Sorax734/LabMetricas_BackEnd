@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -186,8 +188,15 @@ public class UserService {
             existingUser.setPosition(userDto.getPosition());
             existingUser.setPhone(userDto.getPhone());
             existingUser.setStatus(userDto.getStatus());
-        
-            
+
+            Optional<User> user = userRepository.findByEmail(userDto.getEmail());
+            if (user.isPresent() && !user.get().getId().equals(existingUser.getId())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        new ResponseObject("Email already exists", TypeResponse.ERROR));
+            } else {
+                existingUser.setEmail(userDto.getEmail());
+            }
+
             // Update role if changed
             if (!existingUser.getRole().getId().equals(userDto.getRoleId())) {
                 existingUser.setRole(roleRepository.findById(userDto.getRoleId())
@@ -328,9 +337,9 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
             // Soft delete
-            user.setStatus(false);
+            user.setStatus(!user.getStatus());
             user.setDeletedAt(LocalDateTime.now());
-            userRepository.save(user);
+            userRepository.saveAndFlush(user);
 
             return ResponseEntity.ok(
                 new ResponseObject("User deleted successfully", null, TypeResponse.SUCCESS)
