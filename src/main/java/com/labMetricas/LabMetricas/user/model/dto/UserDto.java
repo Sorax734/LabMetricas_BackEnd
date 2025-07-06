@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -40,4 +41,6 @@ public class UserDto {
     private String password;
 
     private String temporaryPassword;
+
+    private LocalDateTime updatedAt;
 } 

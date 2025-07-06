@@ -358,7 +358,17 @@ public class UserService {
         dto.setPosition(user.getPosition());
         dto.setPhone(user.getPhone());
         dto.setStatus(user.getStatus());
+        dto.setUpdatedAt(user.getUpdatedAt());
         dto.setRoleId(user.getRole() != null ? user.getRole().getId() : null);
         return dto;
+
+
+
+
+
+
+
+
+
     }
 } 
