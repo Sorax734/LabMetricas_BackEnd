@@ -9,6 +9,7 @@ import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceInitDataDto;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceRequestDto;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceDetailDto;
 import com.labMetricas.LabMetricas.maintenance.repository.MaintenanceTypeRepository;
+import com.labMetricas.LabMetricas.maintenance.repository.ScheduledMaintenanceRepository;
 import com.labMetricas.LabMetricas.maintenance.service.MaintenanceService;
 import com.labMetricas.LabMetricas.user.model.User;
 import com.labMetricas.LabMetricas.user.repository.UserRepository;
@@ -37,7 +38,24 @@ public class MaintenanceController {
     private MaintenanceTypeRepository maintenanceTypeRepository;
 
     @Autowired
+    private ScheduledMaintenanceRepository scheduledMaintenanceRepository;
+
+    @Autowired
     private EquipmentRepository equipmentRepository;
+
+    @GetMapping("/types")
+    public ResponseEntity<ResponseObject> getMaintenanceTypes() {
+        return ResponseEntity.ok(
+                new ResponseObject("Maintenances types retrieved successfully", maintenanceTypeRepository.findAll(), TypeResponse.SUCCESS)
+        );
+    }
+
+    @GetMapping("/scheduled")
+    public ResponseEntity<ResponseObject> getScheduledMaintenances() {
+        return ResponseEntity.ok(
+                new ResponseObject("Scheduled maintenances types retrieved successfully", scheduledMaintenanceRepository.findAll(), TypeResponse.SUCCESS)
+        );
+    }
 
     @GetMapping("/init-data")
     public ResponseEntity<ResponseObject> getMaintenanceInitializationData() {
@@ -100,7 +118,6 @@ public class MaintenanceController {
     @PutMapping("/update-status/{maintenanceId}")
     public ResponseEntity<ResponseObject> updateMaintenanceStatus(
         @PathVariable UUID maintenanceId,
-        @RequestParam Boolean newStatus,
         Authentication authentication
     ) {
         // Get current user from authentication
@@ -109,8 +126,7 @@ public class MaintenanceController {
 
         // Update maintenance status
         Maintenance maintenance = maintenanceService.updateMaintenanceStatus(
-            maintenanceId, 
-            newStatus, 
+            maintenanceId,
             currentUser
         );
 
