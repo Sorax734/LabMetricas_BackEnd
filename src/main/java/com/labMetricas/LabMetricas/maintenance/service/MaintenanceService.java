@@ -129,11 +129,11 @@ public class MaintenanceService {
     }   
 
     @Transactional
-    public Maintenance updateMaintenanceStatus(UUID maintenanceId, Boolean newStatus, User currentUser) {
+    public Maintenance updateMaintenanceStatus(UUID maintenanceId, User currentUser) {
         Maintenance maintenance = maintenanceRepository.findById(maintenanceId)
             .orElseThrow(() -> new EntityNotFoundException("Maintenance not found"));
         
-        maintenance.setStatus(newStatus);
+        maintenance.setStatus(!maintenance.getStatus());
         maintenance.setUpdatedAt(LocalDateTime.now());
 
         Maintenance updatedMaintenance = maintenanceRepository.save(maintenance);

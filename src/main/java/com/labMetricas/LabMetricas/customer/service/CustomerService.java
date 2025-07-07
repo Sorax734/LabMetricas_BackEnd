@@ -1,5 +1,6 @@
 package com.labMetricas.LabMetricas.customer.service;
 
+import com.labMetricas.LabMetricas.EquipmentCategory.model.EquipmentCategory;
 import com.labMetricas.LabMetricas.customer.model.Customer;
 import com.labMetricas.LabMetricas.customer.model.dto.CustomerDto;
 import com.labMetricas.LabMetricas.customer.repository.CustomerRepository;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -145,6 +147,39 @@ public class CustomerService {
         }
     }
 
+    // Toggle Equipment Category status
+    @Transactional
+    public ResponseEntity<ResponseObject> toggleCustomerStatus(String email) {
+        try {
+            // Find existing customer
+            Customer existingCustomer = customerRepository.findByEmail(email)
+                    .orElseThrow(() -> new EntityNotFoundException("Customer not found with email: " + email));
+
+            // Change status to false (soft delete)
+            existingCustomer.setStatus(!existingCustomer.getStatus());
+            existingCustomer.setLastModification(LocalDateTime.now());
+
+            // Save the updated customer
+            Customer updatedCustomer = customerRepository.saveAndFlush(existingCustomer);
+
+            logger.info("Customer status updated to inactive: {}", email);
+
+            return ResponseEntity.ok(
+                    new ResponseObject("Customer status toggled successfully", updatedCustomer, TypeResponse.SUCCESS)
+            );
+        } catch (EntityNotFoundException e) {
+            logger.error("Customer not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    new ResponseObject(e.getMessage(), null, TypeResponse.ERROR)
+            );
+        } catch (Exception e) {
+            logger.error("Error updating customer status: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    new ResponseObject("Error updating customer status", null, TypeResponse.ERROR)
+            );
+        }
+    }
+
     // Add a method to reactivate a customer
     @Transactional
     public ResponseEntity<ResponseObject> reactivateCustomerByEmail(String email) {
@@ -203,11 +238,11 @@ public class CustomerService {
     public ResponseEntity<ResponseObject> getAllCustomers() {
         try {
             // Fetch only active customers
-            List<Customer> activeCustomers = customerRepository.findByStatusTrue();
-            logger.info("Retrieved {} active customers", activeCustomers.size());
+            List<Customer> activeCustomers = customerRepository.findAll();
+            logger.info("Retrieved {} customers", activeCustomers.size());
 
             return ResponseEntity.ok(
-                new ResponseObject("Active customers retrieved successfully", activeCustomers, TypeResponse.SUCCESS)
+                new ResponseObject("Customers retrieved successfully", activeCustomers, TypeResponse.SUCCESS)
             );
         } catch (Exception e) {
             logger.error("Error retrieving customers: {}", e.getMessage());

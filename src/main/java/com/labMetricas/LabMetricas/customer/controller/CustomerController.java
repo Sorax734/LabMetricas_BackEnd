@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/customers")
@@ -124,5 +125,14 @@ public class CustomerController {
         
         // Delegate to service method
         return customerService.getCustomerByEmail(email);
+    }
+
+    @PatchMapping("/{email}/toggle-status")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPERVISOR', 'OPERADOR')")
+    public ResponseEntity<ResponseObject> toggleCustomerStatus(@PathVariable String email) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        logger.info("User {} attempting to deactivate customer with email {}", auth.getName(), email);
+
+        return customerService.toggleCustomerStatus(email);
     }
 } 
