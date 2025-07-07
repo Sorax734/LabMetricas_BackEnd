@@ -7,16 +7,16 @@ import com.labMetricas.LabMetricas.MaintenanceProvider.repository.MaintenancePro
 import com.labMetricas.LabMetricas.equipment.model.Equipment;
 import com.labMetricas.LabMetricas.equipment.repository.EquipmentRepository;
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
-import com.labMetricas.LabMetricas.maintenance.model.MaintenanceType;
 import com.labMetricas.LabMetricas.maintenance.model.ScheduledMaintenance;
 import com.labMetricas.LabMetricas.maintenance.repository.MaintenanceRepository;
-import com.labMetricas.LabMetricas.maintenance.repository.MaintenanceTypeRepository;
 import com.labMetricas.LabMetricas.maintenance.repository.ScheduledMaintenanceRepository;
 import com.labMetricas.LabMetricas.role.model.Role;
 import com.labMetricas.LabMetricas.role.repository.RoleRepository;
 import com.labMetricas.LabMetricas.user.model.User;
 import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceRequestDto;
+import com.labMetricas.LabMetricas.MaintenanceType.model.MaintenanceType;
+import com.labMetricas.LabMetricas.MaintenanceType.repository.MaintenanceTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -175,41 +175,21 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createMaintenanceTypes() {
-        List<MaintenanceTypeConfig> maintenanceTypes = Arrays.asList(
-            new MaintenanceTypeConfig("Preventive", true, false, false),
-            new MaintenanceTypeConfig("Corrective", false, true, false),
-            new MaintenanceTypeConfig("Predictive", false, false, true),
-            new MaintenanceTypeConfig("Routine", true, false, false),
-            new MaintenanceTypeConfig("Emergency", false, true, false)
+        List<String> maintenanceTypes = Arrays.asList(
+            "Preventive", 
+            "Corrective"
         );
 
-        maintenanceTypes.forEach(config -> {
-            if (!maintenanceTypeRepository.findByNameIgnoreCase(config.name).isPresent()) {
+        maintenanceTypes.forEach(typeName -> {
+            if (!maintenanceTypeRepository.findByName(typeName).isPresent()) {
                 MaintenanceType type = new MaintenanceType(
-                    config.name, 
-                    "Standard " + config.name + " maintenance type", 
-                    config.isPreventive, 
-                    config.isCorrective, 
-                    config.isCalibration
+                    typeName, 
+                    "Standard " + typeName + " maintenance type"
                 );
                 maintenanceTypeRepository.save(type);
-                logger.info("Created maintenance type: {}", config.name);
+                logger.info("Created maintenance type: {}", typeName);
             }
         });
-    }
-
-    private static class MaintenanceTypeConfig {
-        String name;
-        boolean isPreventive;
-        boolean isCorrective;
-        boolean isCalibration;
-
-        MaintenanceTypeConfig(String name, boolean isPreventive, boolean isCorrective, boolean isCalibration) {
-            this.name = name;
-            this.isPreventive = isPreventive;
-            this.isCorrective = isCorrective;
-            this.isCalibration = isCalibration;
-        }
     }
 
     private void createMaintenances() {
@@ -218,7 +198,7 @@ public class DataInitializer implements CommandLineRunner {
         List<MaintenanceType> maintenanceTypes = maintenanceTypeRepository.findAll();
 
         if (!users.isEmpty() && !equipments.isEmpty() && !maintenanceTypes.isEmpty()) {
-            // Example maintenance requests with different priorities and types
+            // Reduce the number of maintenance requests to match available maintenance types
             MaintenanceRequestDto[] maintenanceRequests = {
                 createMaintenanceRequestDto(
                     equipments.get(0), 
@@ -233,27 +213,6 @@ public class DataInitializer implements CommandLineRunner {
                     users.get(1), 
                     "Urgent bearing replacement needed", 
                     MaintenanceRequestDto.Priority.HIGH
-                ),
-                createMaintenanceRequestDto(
-                    equipments.get(2), 
-                    maintenanceTypes.get(2), 
-                    users.get(2), 
-                    "Predictive maintenance for industrial laser cutter", 
-                    MaintenanceRequestDto.Priority.MEDIUM
-                ),
-                createMaintenanceRequestDto(
-                    equipments.get(3), 
-                    maintenanceTypes.get(3), 
-                    users.get(3), 
-                    "Regular maintenance check for spectrophotometer", 
-                    MaintenanceRequestDto.Priority.LOW
-                ),
-                createMaintenanceRequestDto(
-                    equipments.get(4), 
-                    maintenanceTypes.get(4), 
-                    users.get(4), 
-                    "Emergency repair for critical safety equipment", 
-                    MaintenanceRequestDto.Priority.CRITICAL
                 )
             };
 
@@ -410,6 +369,26 @@ public class DataInitializer implements CommandLineRunner {
             role.setUpdatedAt(LocalDateTime.now());
             roleRepository.save(role);
             logger.info("Created role: {}", name);
+        }
+    }
+
+    private void initializeMaintenanceTypes() {
+        // Create Corrective Maintenance Type if not exists
+        if (maintenanceTypeRepository.findByName("Corrective").isEmpty()) {
+            MaintenanceType correctiveMaintenance = new MaintenanceType(
+                "Corrective", 
+                "Maintenance performed to correct or restore a failed or malfunctioning system"
+            );
+            maintenanceTypeRepository.save(correctiveMaintenance);
+        }
+
+        // Create Preventive Maintenance Type if not exists
+        if (maintenanceTypeRepository.findByName("Preventive").isEmpty()) {
+            MaintenanceType preventiveMaintenance = new MaintenanceType(
+                "Preventive", 
+                "Maintenance performed to prevent potential failures or degradation"
+            );
+            maintenanceTypeRepository.save(preventiveMaintenance);
         }
     }
 } 

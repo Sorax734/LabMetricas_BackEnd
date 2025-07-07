@@ -3,6 +3,7 @@ package com.labMetricas.LabMetricas.maintenance.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.labMetricas.LabMetricas.equipment.model.Equipment;
 import com.labMetricas.LabMetricas.user.model.User;
+import com.labMetricas.LabMetricas.MaintenanceType.model.MaintenanceType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

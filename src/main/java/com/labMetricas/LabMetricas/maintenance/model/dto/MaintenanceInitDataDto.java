@@ -1,6 +1,6 @@
 package com.labMetricas.LabMetricas.maintenance.model.dto;
 
-import com.labMetricas.LabMetricas.maintenance.model.MaintenanceType;
+import com.labMetricas.LabMetricas.MaintenanceType.model.MaintenanceType;
 import com.labMetricas.LabMetricas.user.model.User;
 
 import java.util.List;
@@ -51,18 +51,12 @@ public class MaintenanceInitDataDto {
     public static class MaintenanceTypeSummaryDto {
         private String id;
         private String name;
-        private Boolean isPreventive;
-        private Boolean isCorrective;
-        private Boolean isCalibration;
 
         public MaintenanceTypeSummaryDto() {}
 
         public MaintenanceTypeSummaryDto(MaintenanceType type) {
             this.id = type.getId().toString();
             this.name = type.getName();
-            this.isPreventive = type.getIsPreventive();
-            this.isCorrective = type.getIsCorrective();
-            this.isCalibration = type.getIsCalibration();
         }
 
         // Getters and Setters
@@ -70,12 +64,6 @@ public class MaintenanceInitDataDto {
         public void setId(String id) { this.id = id; }
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
-        public Boolean getIsPreventive() { return isPreventive; }
-        public void setIsPreventive(Boolean isPreventive) { this.isPreventive = isPreventive; }
-        public Boolean getIsCorrective() { return isCorrective; }
-        public void setIsCorrective(Boolean isCorrective) { this.isCorrective = isCorrective; }
-        public Boolean getIsCalibration() { return isCalibration; }
-        public void setIsCalibration(Boolean isCalibration) { this.isCalibration = isCalibration; }
     }
 
     // Equipment Summary DTO

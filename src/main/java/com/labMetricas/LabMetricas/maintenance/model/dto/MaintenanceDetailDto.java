@@ -1,6 +1,7 @@
 package com.labMetricas.LabMetricas.maintenance.model.dto;
 
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
+import com.labMetricas.LabMetricas.MaintenanceType.model.MaintenanceType;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -54,8 +55,6 @@ public class MaintenanceDetailDto {
         // Maintenance Type Details
         this.maintenanceTypeId = maintenance.getMaintenanceType().getId();
         this.maintenanceTypeName = maintenance.getMaintenanceType().getName();
-        this.isPreventive = maintenance.getMaintenanceType().getIsPreventive();
-        this.isCorrective = maintenance.getMaintenanceType().getIsCorrective();
         
         // Responsible User Details
         this.responsibleUserId = maintenance.getResponsible().getId();
