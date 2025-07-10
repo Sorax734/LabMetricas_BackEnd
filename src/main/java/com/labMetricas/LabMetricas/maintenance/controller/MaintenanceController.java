@@ -8,12 +8,9 @@ import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceInitDataDto;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceRequestDto;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceDetailDto;
-<<<<<<< HEAD
+
 import com.labMetricas.LabMetricas.MaintenanceType.repository.MaintenanceTypeRepository;
-=======
-import com.labMetricas.LabMetricas.maintenance.repository.MaintenanceTypeRepository;
 import com.labMetricas.LabMetricas.maintenance.repository.ScheduledMaintenanceRepository;
->>>>>>> 16cb9569a8200fe9274670ef7f3fe2772b64f4d0
 import com.labMetricas.LabMetricas.maintenance.service.MaintenanceService;
 import com.labMetricas.LabMetricas.user.model.User;
 import com.labMetricas.LabMetricas.user.repository.UserRepository;

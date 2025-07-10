@@ -29,11 +29,18 @@ public class Customer {
     @Column(name = "name", columnDefinition = "VARCHAR(100)", nullable = false, length = 100)
     private String name;
 
+    @Column(name = "address", columnDefinition = "VARCHAR(255)", nullable = true, length = 255)
+    private String address;
+
+    @Column(name = "phone", columnDefinition = "VARCHAR(20)", nullable = true, length = 20)
+    private String phone;
+
     @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
     private Boolean status = true;
 
     @Column(name = "email", columnDefinition = "VARCHAR(50)", nullable = false, unique = true, length = 50)
     private String email;
+
 
     @Column(name = "nif", columnDefinition = "VARCHAR(20)", nullable = false, unique = true, length = 20)
     private String nif;

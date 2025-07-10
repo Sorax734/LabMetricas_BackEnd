@@ -51,6 +51,10 @@ public class CustomerService {
             customer.setEmail(customerDto.getEmail());
             customer.setNif(customerDto.getNif());
             
+            // Add address and phone fields
+            customer.setAddress(customerDto.getAddress());
+            customer.setPhone(customerDto.getPhone());
+            
             // Always set status to true when creating
             customer.setStatus(true);
             
@@ -90,6 +94,10 @@ public class CustomerService {
             existingCustomer.setName(customerDto.getName());
             existingCustomer.setEmail(customerDto.getEmail());
             existingCustomer.setNif(customerDto.getNif());
+            
+            // Update address and phone fields
+            existingCustomer.setAddress(customerDto.getAddress());
+            existingCustomer.setPhone(customerDto.getPhone());
             
             // Preserve existing status
             // existingCustomer.setStatus(customerDto.getStatus());
