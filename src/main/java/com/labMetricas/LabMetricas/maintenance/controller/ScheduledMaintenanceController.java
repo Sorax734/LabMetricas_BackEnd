@@ -6,12 +6,10 @@ import com.labMetricas.LabMetricas.equipment.repository.EquipmentRepository;
 import com.labMetricas.LabMetricas.MaintenanceType.model.MaintenanceType;
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceInitDataDto;
-import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceRequestDto;
-import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceDetailDto;
-
+import com.labMetricas.LabMetricas.maintenance.model.dto.ScheduledMaintenanceRequestDto;
+import com.labMetricas.LabMetricas.maintenance.model.dto.ScheduledMaintenanceDetailDto;
 import com.labMetricas.LabMetricas.MaintenanceType.repository.MaintenanceTypeRepository;
-import com.labMetricas.LabMetricas.maintenance.repository.ScheduledMaintenanceRepository;
-import com.labMetricas.LabMetricas.maintenance.service.MaintenanceService;
+import com.labMetricas.LabMetricas.maintenance.service.ScheduledMaintenanceService;
 import com.labMetricas.LabMetricas.user.model.User;
 import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import com.labMetricas.LabMetricas.util.ResponseObject;
@@ -26,11 +24,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/maintenance")
-public class MaintenanceController {
+@RequestMapping("/api/scheduled-maintenance")
+public class ScheduledMaintenanceController {
 
     @Autowired
-    private MaintenanceService maintenanceService;
+    private ScheduledMaintenanceService scheduledMaintenanceService;
 
     @Autowired
     private UserRepository userRepository;
@@ -39,14 +37,10 @@ public class MaintenanceController {
     private MaintenanceTypeRepository maintenanceTypeRepository;
 
     @Autowired
-    private ScheduledMaintenanceRepository scheduledMaintenanceRepository;
-
-    @Autowired
     private EquipmentRepository equipmentRepository;
 
-
     @GetMapping("/init-data")
-    public ResponseEntity<ResponseObject> getMaintenanceInitializationData() {
+    public ResponseEntity<ResponseObject> getScheduledMaintenanceInitializationData() {
         // Fetch users
         List<MaintenanceInitDataDto.UserSummaryDto> users = userRepository.findAll().stream()
             .map(MaintenanceInitDataDto.UserSummaryDto::new)
@@ -70,7 +64,7 @@ public class MaintenanceController {
         );
 
         ResponseObject responseObject = new ResponseObject(
-            "Maintenance initialization data retrieved successfully", 
+            "Scheduled maintenance initialization data retrieved successfully", 
             initData,
             TypeResponse.SUCCESS
         );
@@ -79,23 +73,23 @@ public class MaintenanceController {
     }
 
     @PostMapping
-    public ResponseEntity<ResponseObject> createMaintenanceRequest(
-        @Valid @RequestBody MaintenanceRequestDto requestDto,
+    public ResponseEntity<ResponseObject> createScheduledMaintenanceRequest(
+        @Valid @RequestBody ScheduledMaintenanceRequestDto requestDto,
         Authentication authentication
     ) {
         // Get current user from authentication
         User currentUser = userRepository.findByEmail(authentication.getName())
             .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Create maintenance request
-        Maintenance maintenance = maintenanceService.createMaintenanceRequest(
+        // Create scheduled maintenance request
+        Maintenance maintenance = scheduledMaintenanceService.createScheduledMaintenance(
             requestDto, 
             currentUser
         );
 
         // Prepare response
         ResponseObject responseObject = new ResponseObject(
-            "Maintenance request created successfully", 
+            "Scheduled maintenance request created successfully", 
             maintenance,
             TypeResponse.SUCCESS
         );
@@ -104,7 +98,7 @@ public class MaintenanceController {
     }
 
     @PutMapping("/update-status/{maintenanceId}")
-    public ResponseEntity<ResponseObject> updateMaintenanceStatus(
+    public ResponseEntity<ResponseObject> updateScheduledMaintenanceStatus(
         @PathVariable UUID maintenanceId,
         Authentication authentication
     ) {
@@ -112,15 +106,15 @@ public class MaintenanceController {
         User currentUser = userRepository.findByEmail(authentication.getName())
             .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Update maintenance status
-        Maintenance maintenance = maintenanceService.updateMaintenanceStatus(
+        // Update scheduled maintenance status
+        Maintenance maintenance = scheduledMaintenanceService.updateScheduledMaintenanceStatus(
             maintenanceId,
             currentUser
         );
 
         // Prepare response
         ResponseObject responseObject = new ResponseObject(
-            "Maintenance status updated successfully", 
+            "Scheduled maintenance status updated successfully", 
             maintenance,
             TypeResponse.SUCCESS
         );
@@ -129,17 +123,17 @@ public class MaintenanceController {
     }
 
     @PutMapping("/{maintenanceId}")
-    public ResponseEntity<ResponseObject> updateMaintenanceRequest(
+    public ResponseEntity<ResponseObject> updateScheduledMaintenanceRequest(
         @PathVariable UUID maintenanceId,
-        @Valid @RequestBody MaintenanceRequestDto requestDto,
+        @Valid @RequestBody ScheduledMaintenanceRequestDto requestDto,
         Authentication authentication
     ) {
         // Get current user from authentication
         User currentUser = userRepository.findByEmail(authentication.getName())
             .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Update maintenance request
-        Maintenance maintenance = maintenanceService.updateMaintenanceRequest(
+        // Update scheduled maintenance request
+        Maintenance maintenance = scheduledMaintenanceService.updateScheduledMaintenanceRequest(
             maintenanceId, 
             requestDto, 
             currentUser
@@ -147,7 +141,7 @@ public class MaintenanceController {
 
         // Prepare response
         ResponseObject responseObject = new ResponseObject(
-            "Maintenance request updated successfully", 
+            "Scheduled maintenance request updated successfully", 
             maintenance,
             TypeResponse.SUCCESS
         );
@@ -156,7 +150,7 @@ public class MaintenanceController {
     }
 
     @DeleteMapping("/{maintenanceId}")
-    public ResponseEntity<ResponseObject> logicalDeleteMaintenance(
+    public ResponseEntity<ResponseObject> logicalDeleteScheduledMaintenance(
         @PathVariable UUID maintenanceId,
         Authentication authentication
     ) {
@@ -165,14 +159,14 @@ public class MaintenanceController {
             .orElseThrow(() -> new RuntimeException("User not found"));
 
         // Perform logical deletion
-        Maintenance maintenance = maintenanceService.logicalDeleteMaintenance(
+        Maintenance maintenance = scheduledMaintenanceService.logicalDeleteScheduledMaintenance(
             maintenanceId,
             currentUser
         );
 
         // Prepare response
         ResponseObject responseObject = new ResponseObject(
-            "Maintenance request deleted successfully", 
+            "Scheduled maintenance request deleted successfully", 
             maintenance,
             TypeResponse.SUCCESS
         );
@@ -181,16 +175,16 @@ public class MaintenanceController {
     }
 
     @GetMapping("/{maintenanceId}")
-    public ResponseEntity<ResponseObject> getMaintenanceById(
+    public ResponseEntity<ResponseObject> getScheduledMaintenanceById(
         @PathVariable UUID maintenanceId
     ) {
-        // Retrieve maintenance details
-        MaintenanceDetailDto maintenanceDetail = maintenanceService.getMaintenanceById(maintenanceId);
+        // Retrieve scheduled maintenance details
+        ScheduledMaintenanceDetailDto scheduledMaintenanceDetail = scheduledMaintenanceService.getScheduledMaintenanceById(maintenanceId);
 
         // Prepare response
         ResponseObject responseObject = new ResponseObject(
-            "Maintenance record retrieved successfully", 
-            maintenanceDetail,
+            "Scheduled maintenance record retrieved successfully", 
+            scheduledMaintenanceDetail,
             TypeResponse.SUCCESS
         );
 
@@ -198,14 +192,14 @@ public class MaintenanceController {
     }
 
     @GetMapping
-    public ResponseEntity<ResponseObject> getAllMaintenanceRecords() {
-        // Retrieve all maintenance records with full details
-        List<MaintenanceDetailDto> maintenanceDetails = maintenanceService.getAllMaintenanceRecords();
+    public ResponseEntity<ResponseObject> getAllScheduledMaintenanceRecords() {
+        // Retrieve all scheduled maintenance records with full details
+        List<ScheduledMaintenanceDetailDto> scheduledMaintenanceDetails = scheduledMaintenanceService.getAllScheduledMaintenanceRecords();
 
         // Prepare response
         ResponseObject responseObject = new ResponseObject(
-            "Maintenance records retrieved successfully", 
-            maintenanceDetails,
+            "Scheduled maintenance records retrieved successfully", 
+            scheduledMaintenanceDetails,
             TypeResponse.SUCCESS
         );
 

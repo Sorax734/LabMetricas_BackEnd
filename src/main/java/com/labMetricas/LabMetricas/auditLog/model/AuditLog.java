@@ -21,7 +21,7 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 50)
     private String action;
 
     @ManyToOne(fetch = FetchType.LAZY)

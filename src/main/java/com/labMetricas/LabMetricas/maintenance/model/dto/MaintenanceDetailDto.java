@@ -26,8 +26,6 @@ public class MaintenanceDetailDto {
     // Maintenance Type Details
     private UUID maintenanceTypeId;
     private String maintenanceTypeName;
-    private Boolean isPreventive;
-    private Boolean isCorrective;
     
     // Responsible User Details
     private UUID responsibleUserId;

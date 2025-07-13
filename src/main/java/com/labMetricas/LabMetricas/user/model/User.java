@@ -47,6 +47,7 @@ public class User implements UserDetails {
     private String email;
 
     @Column(name = "password", columnDefinition = "VARCHAR(100)", nullable = false, length = 100)
+    @JsonIgnore
     private String password;
 
     @Column(name = "position", columnDefinition = "VARCHAR(50)", nullable = false, length = 50)

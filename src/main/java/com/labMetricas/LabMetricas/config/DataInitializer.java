@@ -8,6 +8,7 @@ import com.labMetricas.LabMetricas.equipment.model.Equipment;
 import com.labMetricas.LabMetricas.equipment.repository.EquipmentRepository;
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
 import com.labMetricas.LabMetricas.maintenance.model.ScheduledMaintenance;
+import com.labMetricas.LabMetricas.maintenance.model.FrequencyType;
 import com.labMetricas.LabMetricas.maintenance.repository.MaintenanceRepository;
 import com.labMetricas.LabMetricas.maintenance.repository.ScheduledMaintenanceRepository;
 import com.labMetricas.LabMetricas.role.model.Role;
@@ -86,6 +87,9 @@ public class DataInitializer implements CommandLineRunner {
 
             // Initialize maintenances
             createMaintenances();
+
+            // Initialize scheduled maintenances
+            createScheduledMaintenances();
 
             logger.info("Complete database initialization completed successfully");
         } catch (Exception e) {
@@ -389,6 +393,154 @@ public class DataInitializer implements CommandLineRunner {
                 "Maintenance performed to prevent potential failures or degradation"
             );
             maintenanceTypeRepository.save(preventiveMaintenance);
+        }
+    }
+
+    private void createScheduledMaintenances() {
+        List<User> users = userRepository.findAll();
+        List<Equipment> equipments = equipmentRepository.findAll();
+        List<MaintenanceType> maintenanceTypes = maintenanceTypeRepository.findAll();
+
+        if (!users.isEmpty() && !equipments.isEmpty() && !maintenanceTypes.isEmpty()) {
+            // Example 1: Weekly maintenance for CNC Machine
+            createScheduledMaintenance(
+                equipments.get(0), // CNC Milling Machine
+                maintenanceTypes.get(0), // Preventive
+                users.get(0), // José García
+                "Limpieza semanal de la máquina CNC - Lubricación de componentes móviles",
+                Maintenance.Priority.MEDIUM,
+                "WEEKLY",
+                1,
+                calculateNextMaintenanceDate("WEEKLY", 1)
+            );
+
+            // Example 2: Monthly maintenance for Spectrophotometer
+            createScheduledMaintenance(
+                equipments.get(1), // Spectrophotometer
+                maintenanceTypes.get(0), // Preventive
+                users.get(1), // María Rodríguez
+                "Calibración mensual del espectrofotómetro - Verificación de precisión",
+                Maintenance.Priority.HIGH,
+                "MONTHLY",
+                1,
+                calculateNextMaintenanceDate("MONTHLY", 1)
+            );
+
+            // Example 3: Quarterly maintenance for Industrial Laser Cutter
+            createScheduledMaintenance(
+                equipments.get(2), // Industrial Laser Cutter
+                maintenanceTypes.get(0), // Preventive
+                users.get(2), // Carlos López
+                "Mantenimiento trimestral del cortador láser - Limpieza de ópticas y alineación",
+                Maintenance.Priority.CRITICAL,
+                "MONTHLY",
+                3,
+                calculateNextMaintenanceDate("MONTHLY", 3)
+            );
+
+            // Example 4: Annual maintenance for Precision Balance
+            createScheduledMaintenance(
+                equipments.get(3), // Precision Balance
+                maintenanceTypes.get(0), // Preventive
+                users.get(3), // Ana Martínez
+                "Calibración anual de la balanza de precisión - Certificación metrológica",
+                Maintenance.Priority.HIGH,
+                "YEARLY",
+                1,
+                calculateNextMaintenanceDate("YEARLY", 1)
+            );
+
+            // Example 5: Daily maintenance for Safety Shower Station
+            createScheduledMaintenance(
+                equipments.get(4), // Safety Shower Station
+                maintenanceTypes.get(0), // Preventive
+                users.get(4), // Luis Hernández
+                "Verificación diaria de la ducha de seguridad - Prueba de funcionamiento",
+                Maintenance.Priority.LOW,
+                "DAILY",
+                1,
+                calculateNextMaintenanceDate("DAILY", 1)
+            );
+
+            // Example 6: Bi-weekly maintenance for Electric Forklift
+            createScheduledMaintenance(
+                equipments.get(5), // Electric Forklift
+                maintenanceTypes.get(0), // Preventive
+                users.get(5), // Laura Sánchez
+                "Mantenimiento quincenal del montacargas eléctrico - Revisión de baterías y neumáticos",
+                Maintenance.Priority.MEDIUM,
+                "WEEKLY",
+                2,
+                calculateNextMaintenanceDate("WEEKLY", 2)
+            );
+
+            logger.info("Created {} scheduled maintenance examples", 6);
+        }
+    }
+
+    private void createScheduledMaintenance(
+        Equipment equipment,
+        MaintenanceType maintenanceType,
+        User responsible,
+        String description,
+        Maintenance.Priority priority,
+        String frequencyType,
+        Integer frequencyValue,
+        LocalDateTime nextMaintenanceDate
+    ) {
+        try {
+            // Create maintenance request
+            Maintenance maintenance = new Maintenance();
+            maintenance.setDescription(description);
+            maintenance.setEquipment(equipment);
+            maintenance.setMaintenanceType(maintenanceType);
+            maintenance.setResponsible(responsible);
+            maintenance.setCode(generateScheduledMaintenanceCode());
+            maintenance.setCreatedAt(LocalDateTime.now());
+            maintenance.setStatus(true);
+            maintenance.setPriority(priority);
+
+            // Save maintenance request
+            Maintenance savedMaintenance = maintenanceRepository.save(maintenance);
+
+            // Create scheduled maintenance
+            ScheduledMaintenance scheduledMaintenance = new ScheduledMaintenance();
+            scheduledMaintenance.setMaintenance(savedMaintenance);
+            scheduledMaintenance.setNextMaintenance(nextMaintenanceDate);
+            scheduledMaintenance.setFrequencyType(convertFrequencyType(frequencyType));
+            scheduledMaintenance.setFrequencyValue(frequencyValue.shortValue());
+
+            // Save scheduled maintenance
+            scheduledMaintenanceRepository.save(scheduledMaintenance);
+
+            logger.info("Created scheduled maintenance: {} for equipment: {}", 
+                savedMaintenance.getCode(), equipment.getName());
+        } catch (Exception e) {
+            logger.error("Error creating scheduled maintenance for equipment: {}", equipment.getName(), e);
+        }
+    }
+
+    private String generateScheduledMaintenanceCode() {
+        return "SCHED-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    private FrequencyType convertFrequencyType(String frequencyType) {
+        return FrequencyType.valueOf(frequencyType);
+    }
+
+    private LocalDateTime calculateNextMaintenanceDate(String frequencyType, Integer frequencyValue) {
+        LocalDateTime now = LocalDateTime.now();
+        switch (frequencyType) {
+            case "DAILY":
+                return now.plusDays(frequencyValue);
+            case "WEEKLY":
+                return now.plusWeeks(frequencyValue);
+            case "MONTHLY":
+                return now.plusMonths(frequencyValue);
+            case "YEARLY":
+                return now.plusYears(frequencyValue);
+            default:
+                return now.plusMonths(1);
         }
     }
 } 
