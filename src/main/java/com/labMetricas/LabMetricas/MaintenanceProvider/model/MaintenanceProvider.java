@@ -34,6 +34,24 @@ public class MaintenanceProvider {
     @Column(name = "name", columnDefinition = "VARCHAR(50)", nullable = false, unique = true, length = 50)
     private String name;
 
+    @Column(name = "address", columnDefinition = "VARCHAR(255)", nullable = true, length = 255)
+    private String address;
+
+    @Column(name = "phone", columnDefinition = "VARCHAR(20)", nullable = true, length = 20)
+    private String phone;
+
+    @Column(name = "email", columnDefinition = "VARCHAR(50)", nullable = false, unique = true, length = 50)
+    private String email;
+
+    @Column(name = "nif", columnDefinition = "VARCHAR(20)", nullable = false, unique = true, length = 20)
+    private String nif;
+
+    @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    private java.time.LocalDateTime createdAt;
+
+    @Column(name = "last_modification", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    private java.time.LocalDateTime lastModification;
+
     @OneToMany(mappedBy = "maintenanceProvider")
     @JsonIgnore
     private List<Equipment> equipments;

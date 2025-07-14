@@ -119,19 +119,39 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createMaintenanceProviders() {
-        List<String> maintenanceProviders = Arrays.asList(
-                "Lab Métricas SAS de CV"
+        List<MaintenanceProvider> providers = Arrays.asList(
+            new MaintenanceProvider(
+                null,
+                true,
+                "Lab Métricas SAS de CV",
+                "Av. Principal 123, CDMX",
+                "555-1234567",
+                "contacto@labmetricas.com",
+                "NIF123456",
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null // Equipments
+            ),
+            new MaintenanceProvider(
+                null,
+                true,
+                "Proveedor Ejemplo",
+                "Calle 456, Monterrey",
+                "818-9876543",
+                "proveedor@ejemplo.com",
+                "NIF654321",
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null
+            )
         );
 
-        maintenanceProviders.forEach(maintenanceProviderName -> {
-            if (!maintenanceProviderRepository.findByNameIgnoreCase(maintenanceProviderName).isPresent()) {
-                MaintenanceProvider maintenanceProvider = new MaintenanceProvider();
-                maintenanceProvider.setName(maintenanceProviderName);
-                maintenanceProvider.setStatus(true);
-                maintenanceProviderRepository.save(maintenanceProvider);
-                logger.info("Created maintenance provider: {}", maintenanceProviderName);
+        for (MaintenanceProvider provider : providers) {
+            if (!maintenanceProviderRepository.findByNameIgnoreCase(provider.getName()).isPresent()) {
+                maintenanceProviderRepository.save(provider);
+                logger.info("Created maintenance provider: {}", provider.getName());
             }
-        });
+        }
     }
 
     private void createEquipment() {

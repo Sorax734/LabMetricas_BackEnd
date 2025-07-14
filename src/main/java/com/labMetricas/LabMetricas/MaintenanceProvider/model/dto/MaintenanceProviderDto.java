@@ -20,10 +20,10 @@ public class MaintenanceProviderDto {
 
     private Boolean status;
 
-    // Constructor without status (will default to true in service)
-    public MaintenanceProviderDto(UUID id, String name) {
-        this.id = id;
-        this.name = name;
-        this.status = true;
-    }
+    private String address;
+    private String phone;
+    private String email;
+    private String nif;
+    private java.time.LocalDateTime createdAt;
+    private java.time.LocalDateTime lastModification;
 } 

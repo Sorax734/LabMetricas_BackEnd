@@ -22,19 +22,28 @@ public class MaintenanceProviderService {
     // Create a new Maintenance Provider (always set status to true)
     @Transactional
     public ResponseObject createMaintenanceProvider(MaintenanceProviderDto providerDto) {
-        // Check if maintenance provider with same name already exists
+        // Check if maintenance provider with same name, email or nif already exists
         if (maintenanceProviderRepository.existsByNameIgnoreCase(providerDto.getName())) {
             return new ResponseObject("Maintenance provider with this name already exists", TypeResponse.ERROR);
         }
+        if (maintenanceProviderRepository.existsByEmailIgnoreCase(providerDto.getEmail())) {
+            return new ResponseObject("Maintenance provider with this email already exists", TypeResponse.ERROR);
+        }
+        if (maintenanceProviderRepository.existsByNifIgnoreCase(providerDto.getNif())) {
+            return new ResponseObject("Maintenance provider with this NIF already exists", TypeResponse.ERROR);
+        }
 
-        // Create new maintenance provider (always set status to true)
         MaintenanceProvider provider = new MaintenanceProvider();
         provider.setName(providerDto.getName());
         provider.setStatus(true);  // Always set to true when creating
+        provider.setAddress(providerDto.getAddress());
+        provider.setPhone(providerDto.getPhone());
+        provider.setEmail(providerDto.getEmail());
+        provider.setNif(providerDto.getNif());
+        provider.setCreatedAt(java.time.LocalDateTime.now());
+        provider.setLastModification(java.time.LocalDateTime.now());
 
         MaintenanceProvider savedProvider = maintenanceProviderRepository.save(provider);
-
-        // Convert to DTO for response
         MaintenanceProviderDto savedDto = convertToDto(savedProvider);
         return new ResponseObject("Maintenance provider created successfully", savedDto, TypeResponse.SUCCESS);
     }
@@ -86,15 +95,29 @@ public class MaintenanceProviderService {
         MaintenanceProvider existingProvider = maintenanceProviderRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Maintenance provider not found with id: " + id));
 
-        // Check if new name already exists (excluding current provider)
+        // Check if new name, email or nif already exists (excluding current provider)
         if (maintenanceProviderRepository.findByNameIgnoreCase(providerDto.getName())
                 .map(prov -> !prov.getId().equals(id))
                 .orElse(false)) {
             return new ResponseObject("Maintenance provider with this name already exists", TypeResponse.ERROR);
         }
+        if (maintenanceProviderRepository.findByEmailIgnoreCase(providerDto.getEmail())
+                .map(prov -> !prov.getId().equals(id))
+                .orElse(false)) {
+            return new ResponseObject("Maintenance provider with this email already exists", TypeResponse.ERROR);
+        }
+        if (maintenanceProviderRepository.findByNifIgnoreCase(providerDto.getNif())
+                .map(prov -> !prov.getId().equals(id))
+                .orElse(false)) {
+            return new ResponseObject("Maintenance provider with this NIF already exists", TypeResponse.ERROR);
+        }
 
-        // Update only the name
         existingProvider.setName(providerDto.getName());
+        existingProvider.setAddress(providerDto.getAddress());
+        existingProvider.setPhone(providerDto.getPhone());
+        existingProvider.setEmail(providerDto.getEmail());
+        existingProvider.setNif(providerDto.getNif());
+        existingProvider.setLastModification(java.time.LocalDateTime.now());
 
         MaintenanceProvider updatedProvider = maintenanceProviderRepository.save(existingProvider);
         return new ResponseObject("Maintenance provider updated successfully", convertToDto(updatedProvider), TypeResponse.SUCCESS);
@@ -116,7 +139,13 @@ public class MaintenanceProviderService {
         return new MaintenanceProviderDto(
                 provider.getId(),
                 provider.getName(),
-                provider.getStatus()
+                provider.getStatus(),
+                provider.getAddress(),
+                provider.getPhone(),
+                provider.getEmail(),
+                provider.getNif(),
+                provider.getCreatedAt(),
+                provider.getLastModification()
         );
     }
 } 

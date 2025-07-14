@@ -18,4 +18,16 @@ public interface MaintenanceProviderRepository extends JpaRepository<Maintenance
 
     // Check if a maintenance provider name already exists
     boolean existsByNameIgnoreCase(String name);
+
+    // Find by email (case-insensitive)
+    Optional<MaintenanceProvider> findByEmailIgnoreCase(String email);
+
+    // Find by NIF (case-insensitive)
+    Optional<MaintenanceProvider> findByNifIgnoreCase(String nif);
+
+    // Check if a maintenance provider email already exists
+    boolean existsByEmailIgnoreCase(String email);
+
+    // Check if a maintenance provider NIF already exists
+    boolean existsByNifIgnoreCase(String nif);
 }
