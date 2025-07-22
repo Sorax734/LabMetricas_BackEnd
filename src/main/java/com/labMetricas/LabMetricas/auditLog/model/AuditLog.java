@@ -21,7 +21,7 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false, length = 50)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String action;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -30,6 +30,7 @@ public class AuditLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     private User user;
 
     @Column(name = "deleted_at")

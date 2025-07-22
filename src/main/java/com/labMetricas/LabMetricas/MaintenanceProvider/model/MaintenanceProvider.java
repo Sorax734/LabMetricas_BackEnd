@@ -31,7 +31,7 @@ public class MaintenanceProvider {
     @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
     private Boolean status = true;
 
-    @Column(name = "name", columnDefinition = "VARCHAR(50)", nullable = false, unique = true, length = 50)
+    @Column(name = "name", columnDefinition = "VARCHAR(1000)", nullable = false, unique = true, length = 50)
     private String name;
 
     @Column(name = "address", columnDefinition = "VARCHAR(255)", nullable = true, length = 255)
