@@ -8,6 +8,7 @@ import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
 import com.labMetricas.LabMetricas.MaintenanceType.model.MaintenanceType;
 import com.labMetricas.LabMetricas.maintenance.repository.MaintenanceRepository;
 import com.labMetricas.LabMetricas.MaintenanceType.repository.MaintenanceTypeRepository;
+import com.labMetricas.LabMetricas.Notice.service.NoticeService;
 import com.labMetricas.LabMetricas.sentEmail.model.SentEmail;
 import com.labMetricas.LabMetricas.sentEmail.repository.SentEmailRepository;
 import com.labMetricas.LabMetricas.user.model.User;
@@ -45,6 +46,9 @@ public class MaintenanceService {
     @Autowired
     private SentEmailRepository sentEmailRepository;
 
+    @Autowired
+    private NoticeService noticeService;
+
     @Transactional
     public Maintenance createMaintenanceRequest(
         MaintenanceRequestDto requestDto, 
@@ -77,8 +81,11 @@ public class MaintenanceService {
         // Create audit log
         createMaintenanceAuditLog(savedMaintenance, currentUser);
 
-        // Send notification
+        // Send email notification
         sendMaintenanceNotification(savedMaintenance, responsible);
+
+        // Create notice notification
+        noticeService.createMaintenanceNotice(savedMaintenance, responsible);
 
         return savedMaintenance;
     }
@@ -144,6 +151,11 @@ public class MaintenanceService {
 
         // Send notification about status update
         sendMaintenanceStatusUpdateNotification(updatedMaintenance, currentUser);
+
+        // If maintenance is completed (status = false), delete related notices
+        if (!updatedMaintenance.getStatus()) {
+            noticeService.deleteNoticesByMaintenanceCode(updatedMaintenance.getCode());
+        }
 
         return updatedMaintenance;
     }
