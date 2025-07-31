@@ -166,6 +166,7 @@ public class EquipmentService {
         dto.setModel(equipment.getModel());
         dto.setRemarks(equipment.getRemarks());
         dto.setStatus(equipment.getStatus());
+        dto.setUpdatedAt(equipment.getUpdatedAt());
         dto.setAssignedToId(equipment.getAssignedTo().getId());
         dto.setEquipmentCategoryId(equipment.getEquipmentCategory().getId());
         dto.setMaintenanceProviderId(equipment.getMaintenanceProvider().getId());

@@ -1,25 +1,30 @@
 package com.labMetricas.LabMetricas.user.controller;
 
 import com.labMetricas.LabMetricas.enums.TypeResponse;
+import com.labMetricas.LabMetricas.security.AuthController;
 import com.labMetricas.LabMetricas.user.dto.UserDetailsDto;
 import com.labMetricas.LabMetricas.user.model.User;
 import com.labMetricas.LabMetricas.user.model.dto.ChangePasswordDto;
 import com.labMetricas.LabMetricas.user.model.dto.UserDto;
+import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import com.labMetricas.LabMetricas.user.service.UserService;
 import com.labMetricas.LabMetricas.util.ResponseObject;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
@@ -28,6 +33,9 @@ public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // Constructor injection
     public UserController(UserService userService) {
@@ -70,6 +78,28 @@ public class UserController {
         logger.info("User {} attempting to create a new user", auth.getName());
         
         return userService.createUser(userDto);
+    }
+
+    @PutMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ResponseObject> updateUserProfile(@Valid @RequestBody UserDto userDto) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentEmail = auth.getName();
+
+        logger.info("User {} attempting to update own profile", currentEmail);
+
+        Optional<User> user = userRepository.findByEmail(currentEmail);
+
+        // Verificamos que el id del DTO coincida con el del usuario autenticado
+        if (!user.get().getId().equals(userDto.getId())) {
+            logger.warn("User id mismatch: principal={} vs dto={}", user.get().getId(), userDto.getId());
+
+            return ResponseEntity.badRequest().body(
+                    new ResponseObject("No tienes permiso para actualizar este perfil", null, TypeResponse.ERROR)
+            );
+        }
+
+        return userService.updateUser(userDto);
     }
 
     @PutMapping
