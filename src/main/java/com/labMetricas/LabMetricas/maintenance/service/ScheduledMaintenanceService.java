@@ -102,12 +102,12 @@ public class ScheduledMaintenanceService {
         return savedMaintenance;
     }
 
-    private String generateScheduledMaintenanceCode() {
+    public String generateScheduledMaintenanceCode() {
         // Generate a unique scheduled maintenance code
         return "SCHED-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    private FrequencyType convertFrequencyType(ScheduledMaintenanceRequestDto.FrequencyType dtoFrequencyType) {
+    public FrequencyType convertFrequencyType(ScheduledMaintenanceRequestDto.FrequencyType dtoFrequencyType) {
         return FrequencyType.valueOf(dtoFrequencyType.name());
     }
 
@@ -126,11 +126,11 @@ public class ScheduledMaintenanceService {
         }
     }
 
-    private Maintenance.Priority convertPriority(ScheduledMaintenanceRequestDto.Priority dtoPriority) {
+    public Maintenance.Priority convertPriority(ScheduledMaintenanceRequestDto.Priority dtoPriority) {
         return Maintenance.Priority.valueOf(dtoPriority.name());
     }
 
-    private void createScheduledMaintenanceAuditLog(Maintenance maintenance, User user) {
+    public void createScheduledMaintenanceAuditLog(Maintenance maintenance, User user) {
         AuditLog auditLog = new AuditLog();
         auditLog.setAction("CREATE_SCHED_MAINT");
         auditLog.setUser(user);
@@ -139,7 +139,7 @@ public class ScheduledMaintenanceService {
         auditLogRepository.save(auditLog);
     }
 
-    private void sendScheduledMaintenanceNotification(Maintenance maintenance, User responsible) {
+    public void sendScheduledMaintenanceNotification(Maintenance maintenance, User responsible) {
         // Create a sent email record for the scheduled maintenance notification
         SentEmail sentEmail = new SentEmail();
         sentEmail.setSubject("New Scheduled Maintenance: " + maintenance.getCode());

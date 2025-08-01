@@ -2,6 +2,10 @@ package com.labMetricas.LabMetricas.equipment.controller;
 
 import com.labMetricas.LabMetricas.equipment.model.dto.EquipmentDto;
 import com.labMetricas.LabMetricas.equipment.service.EquipmentService;
+import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
+import com.labMetricas.LabMetricas.maintenance.model.dto.ScheduledMaintenanceRequestDto;
+import com.labMetricas.LabMetricas.user.model.User;
+import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import com.labMetricas.LabMetricas.util.ResponseObject;
 import com.labMetricas.LabMetricas.enums.TypeResponse;
 import com.labMetricas.LabMetricas.util.PageResponse;
@@ -9,6 +13,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,12 +26,39 @@ public class EquipmentController {
     @Autowired
     private EquipmentService equipmentService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     // Create new equipment
     @PostMapping
     public ResponseEntity<ResponseObject> createEquipment(@Valid @RequestBody EquipmentDto equipmentDto) {
         EquipmentDto createdEquipment = equipmentService.createEquipment(equipmentDto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ResponseObject("Equipment created successfully", createdEquipment, TypeResponse.SUCCESS));
+    }
+
+    public record EquipmentWithMaintenancesDto(
+            @Valid EquipmentDto equipment,
+            @Valid List<@Valid ScheduledMaintenanceRequestDto> maintenances
+    ) {}
+
+    // Create new equipment
+    @PostMapping("/withMaintenances")
+    public ResponseEntity<ResponseObject> createEquipmentWithMaintenances(@Valid @RequestBody EquipmentWithMaintenancesDto payload, Authentication authentication) {
+        // Get current user from authentication
+        User currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        EquipmentDto createdEquipment = equipmentService.createEquipmentWithMaintenances(payload, currentUser);
+
+        // Prepare response
+        ResponseObject responseObject = new ResponseObject(
+                "Equipment with scheduled maintenances request created successfully",
+                createdEquipment,
+                TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
     }
 
     // Get equipment by ID

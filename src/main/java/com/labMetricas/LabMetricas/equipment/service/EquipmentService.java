@@ -4,14 +4,26 @@ import com.labMetricas.LabMetricas.EquipmentCategory.model.EquipmentCategory;
 import com.labMetricas.LabMetricas.EquipmentCategory.repository.EquipmentCategoryRepository;
 import com.labMetricas.LabMetricas.MaintenanceProvider.model.MaintenanceProvider;
 import com.labMetricas.LabMetricas.MaintenanceProvider.repository.MaintenanceProviderRepository;
+import com.labMetricas.LabMetricas.MaintenanceType.model.MaintenanceType;
+import com.labMetricas.LabMetricas.MaintenanceType.repository.MaintenanceTypeRepository;
+import com.labMetricas.LabMetricas.enums.TypeResponse;
+import com.labMetricas.LabMetricas.equipment.controller.EquipmentController;
 import com.labMetricas.LabMetricas.equipment.model.Equipment;
 import com.labMetricas.LabMetricas.equipment.model.dto.EquipmentDto;
 import com.labMetricas.LabMetricas.equipment.repository.EquipmentRepository;
+import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
+import com.labMetricas.LabMetricas.maintenance.model.ScheduledMaintenance;
+import com.labMetricas.LabMetricas.maintenance.model.dto.ScheduledMaintenanceRequestDto;
+import com.labMetricas.LabMetricas.maintenance.repository.MaintenanceRepository;
+import com.labMetricas.LabMetricas.maintenance.repository.ScheduledMaintenanceRepository;
+import com.labMetricas.LabMetricas.maintenance.service.ScheduledMaintenanceService;
 import com.labMetricas.LabMetricas.user.model.User;
 import com.labMetricas.LabMetricas.user.repository.UserRepository;
+import com.labMetricas.LabMetricas.util.ResponseObject;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,10 +41,22 @@ public class EquipmentService {
     private UserRepository userRepository;
 
     @Autowired
+    private ScheduledMaintenanceRepository scheduledMaintenanceRepository;
+
+    @Autowired
+    private MaintenanceRepository maintenanceRepository;
+
+    @Autowired
+    private MaintenanceTypeRepository maintenanceTypeRepository;
+
+    @Autowired
     private EquipmentCategoryRepository equipmentCategoryRepository;
 
     @Autowired
     private MaintenanceProviderRepository maintenanceProviderRepository;
+
+    @Autowired
+    private ScheduledMaintenanceService scheduledMaintenanceService;
 
     // Create new equipment
     @Transactional
@@ -41,6 +65,54 @@ public class EquipmentService {
         equipment.setCreatedAt(LocalDateTime.now());
         equipment.setStatus(true);
         Equipment savedEquipment = equipmentRepository.save(equipment);
+        return mapToDto(savedEquipment);
+    }
+
+    // Create new equipment
+    @Transactional
+    public EquipmentDto createEquipmentWithMaintenances(EquipmentController.EquipmentWithMaintenancesDto payload, User currentUser) {
+        Equipment equipment = mapToEntity(payload.equipment());
+        equipment.setCreatedAt(LocalDateTime.now());
+        equipment.setStatus(true);
+        Equipment savedEquipment = equipmentRepository.saveAndFlush(equipment);
+
+        for (ScheduledMaintenanceRequestDto dto : payload.maintenances()) {
+            Maintenance maintenance = new Maintenance();
+
+            MaintenanceType maintenanceType = maintenanceTypeRepository.findById(dto.getMaintenanceTypeId())
+                    .orElseThrow(() -> new EntityNotFoundException("Maintenance Type not found"));
+
+            User responsible = userRepository.findByIdWithRole(dto.getResponsibleUserId())
+                    .orElseThrow(() -> new EntityNotFoundException("Responsible User not found"));
+
+            maintenance.setDescription(dto.getDescription());
+            maintenance.setEquipment(savedEquipment);
+            maintenance.setMaintenanceType(maintenanceType);
+            maintenance.setResponsible(responsible);
+            maintenance.setCode(scheduledMaintenanceService.generateScheduledMaintenanceCode());
+            maintenance.setCreatedAt(LocalDateTime.now());
+            maintenance.setStatus(true);
+            maintenance.setPriority(scheduledMaintenanceService.convertPriority(dto.getPriority()));
+
+            Maintenance savedMaintenance = maintenanceRepository.saveAndFlush(maintenance);
+
+            // Create scheduled maintenance
+            ScheduledMaintenance scheduledMaintenance = new ScheduledMaintenance();
+            scheduledMaintenance.setMaintenance(savedMaintenance);
+            scheduledMaintenance.setNextMaintenance(dto.getNextMaintenanceDate());
+            scheduledMaintenance.setFrequencyType(scheduledMaintenanceService.convertFrequencyType(dto.getFrequencyType()));
+            scheduledMaintenance.setFrequencyValue(dto.getFrequencyValue().shortValue());
+
+            // Save scheduled maintenance
+            scheduledMaintenanceRepository.save(scheduledMaintenance);
+
+            // Create audit log
+            scheduledMaintenanceService.createScheduledMaintenanceAuditLog(savedMaintenance, currentUser);
+
+            // Send notification
+            scheduledMaintenanceService.sendScheduledMaintenanceNotification(savedMaintenance, responsible);
+        }
+
         return mapToDto(savedEquipment);
     }
 
