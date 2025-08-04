@@ -1,6 +1,7 @@
 package com.labMetricas.LabMetricas.maintenance.repository;
 
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
+import com.labMetricas.LabMetricas.user.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -23,4 +24,10 @@ public interface MaintenanceRepository extends JpaRepository<Maintenance, UUID> 
     
     // Find pending maintenance for a specific reviewer
     List<Maintenance> findByReviewStatusAndReviewedById(Maintenance.ReviewStatus reviewStatus, UUID reviewedById);
+    
+    // Find maintenance created by user (ordered by creation date desc)
+    List<Maintenance> findByRequestedByOrderByCreatedAtDesc(User requestedBy);
+    
+    // Find maintenance assigned to user (ordered by creation date desc)
+    List<Maintenance> findByResponsibleOrderByCreatedAtDesc(User responsible);
 } 

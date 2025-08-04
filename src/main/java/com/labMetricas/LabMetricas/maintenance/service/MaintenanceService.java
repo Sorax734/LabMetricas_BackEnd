@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 public class MaintenanceService {
@@ -432,6 +433,41 @@ public class MaintenanceService {
     @Transactional(readOnly = true)
     public List<MaintenanceDetailDto> getRejectedMaintenance() {
         return maintenanceRepository.findByReviewStatus(Maintenance.ReviewStatus.REJECTED).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getMaintenanceCreatedByUser(User user) {
+        return maintenanceRepository.findByRequestedByOrderByCreatedAtDesc(user).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getMaintenanceAssignedToUser(User user) {
+        return maintenanceRepository.findByResponsibleOrderByCreatedAtDesc(user).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getMyMaintenance(User user) {
+        // Obtener mantenimientos creados por el usuario
+        List<Maintenance> createdMaintenance = maintenanceRepository.findByRequestedByOrderByCreatedAtDesc(user);
+        
+        // Obtener mantenimientos asignados al usuario
+        List<Maintenance> assignedMaintenance = maintenanceRepository.findByResponsibleOrderByCreatedAtDesc(user);
+        
+        // Combinar ambas listas y eliminar duplicados
+        List<Maintenance> allMaintenance = new ArrayList<>();
+        allMaintenance.addAll(createdMaintenance);
+        allMaintenance.addAll(assignedMaintenance);
+        
+        // Ordenar por fecha de creación (más reciente primero)
+        allMaintenance.sort((m1, m2) -> m2.getCreatedAt().compareTo(m1.getCreatedAt()));
+        
+        return allMaintenance.stream()
             .map(MaintenanceDetailDto::new)
             .collect(Collectors.toList());
     }

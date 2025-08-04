@@ -352,6 +352,57 @@ public class MaintenanceController {
         return ResponseEntity.ok(responseObject);
     }
 
+    @GetMapping("/created-by-me")
+    public ResponseEntity<ResponseObject> getMaintenanceCreatedByMe(Authentication authentication) {
+        // Get current user from authentication
+        User currentUser = userRepository.findByEmail(authentication.getName())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<MaintenanceDetailDto> maintenanceList = maintenanceService.getMaintenanceCreatedByUser(currentUser);
+
+        ResponseObject responseObject = new ResponseObject(
+            "Maintenance records created by you retrieved successfully", 
+            maintenanceList,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @GetMapping("/assigned-to-me")
+    public ResponseEntity<ResponseObject> getMaintenanceAssignedToMe(Authentication authentication) {
+        // Get current user from authentication
+        User currentUser = userRepository.findByEmail(authentication.getName())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<MaintenanceDetailDto> maintenanceList = maintenanceService.getMaintenanceAssignedToUser(currentUser);
+
+        ResponseObject responseObject = new ResponseObject(
+            "Maintenance records assigned to you retrieved successfully", 
+            maintenanceList,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @GetMapping("/my-maintenance")
+    public ResponseEntity<ResponseObject> getMyMaintenance(Authentication authentication) {
+        // Get current user from authentication
+        User currentUser = userRepository.findByEmail(authentication.getName())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<MaintenanceDetailDto> maintenanceList = maintenanceService.getMyMaintenance(currentUser);
+
+        ResponseObject responseObject = new ResponseObject(
+            "All your maintenance records (created and assigned) retrieved successfully", 
+            maintenanceList,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
     @PostMapping("/approved/{maintenanceId}")
     public ResponseEntity<ResponseObject> approveMaintenance(
         @PathVariable UUID maintenanceId,
