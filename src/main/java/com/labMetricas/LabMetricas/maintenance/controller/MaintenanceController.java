@@ -8,6 +8,8 @@ import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceInitDataDto;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceRequestDto;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceDetailDto;
+import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceSubmitForReviewDto;
+import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceRejectionDto;
 
 import com.labMetricas.LabMetricas.MaintenanceType.repository.MaintenanceTypeRepository;
 import com.labMetricas.LabMetricas.maintenance.repository.ScheduledMaintenanceRepository;
@@ -206,6 +208,196 @@ public class MaintenanceController {
         ResponseObject responseObject = new ResponseObject(
             "Maintenance records retrieved successfully", 
             maintenanceDetails,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @PostMapping("/submit-for-review")
+    public ResponseEntity<ResponseObject> submitMaintenanceForReview(
+        @Valid @RequestBody MaintenanceSubmitForReviewDto requestDto,
+        Authentication authentication
+    ) {
+        // Get current user from authentication
+        User currentUser = userRepository.findByEmail(authentication.getName())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Submit maintenance for review
+        Maintenance maintenance = maintenanceService.submitMaintenanceForReview(
+            requestDto.getMaintenanceId(),
+            currentUser
+        );
+
+        // Prepare response
+        ResponseObject responseObject = new ResponseObject(
+            "Maintenance submitted for review successfully", 
+            maintenance,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+
+
+
+
+
+
+    @GetMapping("/status/{reviewStatus}")
+    public ResponseEntity<ResponseObject> getMaintenanceByReviewStatus(
+        @PathVariable String reviewStatus
+    ) {
+        try {
+            Maintenance.ReviewStatus status = Maintenance.ReviewStatus.valueOf(reviewStatus.toUpperCase());
+            List<MaintenanceDetailDto> maintenanceList = maintenanceService.getMaintenanceByReviewStatus(status);
+
+            ResponseObject responseObject = new ResponseObject(
+                "Maintenance records retrieved successfully", 
+                maintenanceList,
+                TypeResponse.SUCCESS
+            );
+
+            return ResponseEntity.ok(responseObject);
+        } catch (IllegalArgumentException e) {
+            ResponseObject responseObject = new ResponseObject(
+                "Invalid review status: " + reviewStatus, 
+                null,
+                TypeResponse.ERROR
+            );
+            return ResponseEntity.badRequest().body(responseObject);
+        }
+    }
+
+    @GetMapping("/responsible/{userId}")
+    public ResponseEntity<ResponseObject> getMaintenanceByResponsibleUser(
+        @PathVariable UUID userId
+    ) {
+        List<MaintenanceDetailDto> maintenanceList = maintenanceService.getMaintenanceByResponsibleUser(userId);
+
+        ResponseObject responseObject = new ResponseObject(
+            "Maintenance records for responsible user retrieved successfully", 
+            maintenanceList,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @GetMapping("/requested/{userId}")
+    public ResponseEntity<ResponseObject> getMaintenanceByRequestedUser(
+        @PathVariable UUID userId
+    ) {
+        List<MaintenanceDetailDto> maintenanceList = maintenanceService.getMaintenanceByRequestedUser(userId);
+
+        ResponseObject responseObject = new ResponseObject(
+            "Maintenance records for requested user retrieved successfully", 
+            maintenanceList,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @GetMapping("/pending-review")
+    public ResponseEntity<ResponseObject> getPendingReviewMaintenance() {
+        List<MaintenanceDetailDto> maintenanceList = maintenanceService.getPendingReviewMaintenance();
+
+        ResponseObject responseObject = new ResponseObject(
+            "Pending review maintenance records retrieved successfully", 
+            maintenanceList,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @GetMapping("/approved")
+    public ResponseEntity<ResponseObject> getApprovedMaintenance() {
+        List<MaintenanceDetailDto> maintenanceList = maintenanceService.getApprovedMaintenance();
+
+        ResponseObject responseObject = new ResponseObject(
+            "Approved maintenance records retrieved successfully", 
+            maintenanceList,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @GetMapping("/in-progress")
+    public ResponseEntity<ResponseObject> getInProgressMaintenance() {
+        List<MaintenanceDetailDto> maintenanceList = maintenanceService.getInProgressMaintenance();
+
+        ResponseObject responseObject = new ResponseObject(
+            "In progress maintenance records retrieved successfully", 
+            maintenanceList,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @GetMapping("/rejected")
+    public ResponseEntity<ResponseObject> getRejectedMaintenance() {
+        List<MaintenanceDetailDto> maintenanceList = maintenanceService.getRejectedMaintenance();
+
+        ResponseObject responseObject = new ResponseObject(
+            "Rejected maintenance records retrieved successfully", 
+            maintenanceList,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @PostMapping("/approved/{maintenanceId}")
+    public ResponseEntity<ResponseObject> approveMaintenance(
+        @PathVariable UUID maintenanceId,
+        Authentication authentication
+    ) {
+        // Get current user from authentication
+        User currentUser = userRepository.findByEmail(authentication.getName())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Approve maintenance
+        Maintenance maintenance = maintenanceService.approveMaintenance(
+            maintenanceId,
+            currentUser
+        );
+
+        // Prepare response
+        ResponseObject responseObject = new ResponseObject(
+            "Maintenance approved successfully", 
+            maintenance,
+            TypeResponse.SUCCESS
+        );
+
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @PostMapping("/rejected/{maintenanceId}")
+    public ResponseEntity<ResponseObject> rejectMaintenance(
+        @PathVariable UUID maintenanceId,
+        @Valid @RequestBody MaintenanceRejectionDto rejectionDto,
+        Authentication authentication
+    ) {
+        // Get current user from authentication
+        User currentUser = userRepository.findByEmail(authentication.getName())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Reject maintenance
+        Maintenance maintenance = maintenanceService.rejectMaintenance(
+            maintenanceId,
+            rejectionDto.getRejectionReason(),
+            currentUser
+        );
+
+        // Prepare response
+        ResponseObject responseObject = new ResponseObject(
+            "Maintenance rejected successfully", 
+            maintenance,
             TypeResponse.SUCCESS
         );
 

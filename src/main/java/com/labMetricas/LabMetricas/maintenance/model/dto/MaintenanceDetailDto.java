@@ -16,6 +16,8 @@ public class MaintenanceDetailDto {
     private String description;
     private Boolean status;
     private String priority;
+    private String reviewStatus;
+    private String rejectionReason;
     
     // Equipment Details
     private UUID equipmentId;
@@ -33,6 +35,16 @@ public class MaintenanceDetailDto {
     private String responsibleUserEmail;
     private String responsibleUserRole;
     
+    // Request and Review Details
+    private UUID requestedById;
+    private String requestedByName;
+    private String requestedByEmail;
+    
+    private UUID reviewedById;
+    private String reviewedByName;
+    private String reviewedByEmail;
+    private LocalDateTime reviewedAt;
+    
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -43,6 +55,8 @@ public class MaintenanceDetailDto {
         this.description = maintenance.getDescription();
         this.status = maintenance.getStatus();
         this.priority = maintenance.getPriority().name();
+        this.reviewStatus = maintenance.getReviewStatus() != null ? maintenance.getReviewStatus().name() : null;
+        this.rejectionReason = maintenance.getRejectionReason();
         
         // Equipment Details
         this.equipmentId = maintenance.getEquipment().getId();
@@ -60,6 +74,20 @@ public class MaintenanceDetailDto {
         this.responsibleUserEmail = maintenance.getResponsible().getEmail();
         this.responsibleUserRole = maintenance.getResponsible().getRole().getName();
         
+        // Request and Review Details
+        if (maintenance.getRequestedBy() != null) {
+            this.requestedById = maintenance.getRequestedBy().getId();
+            this.requestedByName = maintenance.getRequestedBy().getName();
+            this.requestedByEmail = maintenance.getRequestedBy().getEmail();
+        }
+        
+        if (maintenance.getReviewedBy() != null) {
+            this.reviewedById = maintenance.getReviewedBy().getId();
+            this.reviewedByName = maintenance.getReviewedBy().getName();
+            this.reviewedByEmail = maintenance.getReviewedBy().getEmail();
+        }
+        
+        this.reviewedAt = maintenance.getReviewedAt();
         this.createdAt = maintenance.getCreatedAt();
         this.updatedAt = maintenance.getUpdatedAt();
     }

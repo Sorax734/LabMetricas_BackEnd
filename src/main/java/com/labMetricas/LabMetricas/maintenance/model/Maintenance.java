@@ -48,6 +48,25 @@ public class Maintenance {
     @Column(name = "priority", columnDefinition = "ENUM('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')")
     private Priority priority = Priority.MEDIUM;
 
+    // Nuevos campos para el flujo de aprobación
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_status", columnDefinition = "ENUM('IN_PROGRESS', 'PENDING', 'APPROVED', 'REJECTED')")
+    private ReviewStatus reviewStatus = ReviewStatus.IN_PROGRESS;
+
+    @Column(name = "rejection_reason", columnDefinition = "VARCHAR(500)", length = 500)
+    private String rejectionReason;
+
+    @ManyToOne
+    @JoinColumn(name = "requested_by")
+    private User requestedBy;
+
+    @ManyToOne
+    @JoinColumn(name = "reviewed_by")
+    private User reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
     @ManyToOne
     @JoinColumn(name = "maintenance_type", nullable = false)
     private MaintenanceType maintenanceType;
@@ -67,5 +86,13 @@ public class Maintenance {
     // Priority enum
     public enum Priority {
         LOW, MEDIUM, HIGH, CRITICAL
+    }
+
+    // Review Status enum
+    public enum ReviewStatus {
+        IN_PROGRESS,  // En progreso (automático al crear)
+        PENDING,      // Pendiente de revisión por el creador
+        APPROVED,     // Aprobado por el creador
+        REJECTED      // Rechazado por el creador
     }
 } 

@@ -70,10 +70,12 @@ public class MaintenanceService {
         maintenance.setEquipment(equipment);
         maintenance.setMaintenanceType(maintenanceType);
         maintenance.setResponsible(responsible);
+        maintenance.setRequestedBy(currentUser); // Set the creator
         maintenance.setCode(generateMaintenanceCode());
         maintenance.setCreatedAt(LocalDateTime.now());
         maintenance.setStatus(true);
         maintenance.setPriority(convertPriority(requestDto.getPriority()));
+        maintenance.setReviewStatus(Maintenance.ReviewStatus.IN_PROGRESS); // Automatically in progress
 
         // Save maintenance request
         Maintenance savedMaintenance = maintenanceRepository.save(maintenance);
@@ -81,10 +83,10 @@ public class MaintenanceService {
         // Create audit log
         createMaintenanceAuditLog(savedMaintenance, currentUser);
 
-        // Send email notification
-        sendMaintenanceNotification(savedMaintenance, responsible);
+        // Send notification to responsible person about new assignment
+        sendMaintenanceAssignmentNotification(savedMaintenance, responsible, currentUser);
 
-        // Create notice notification
+        // Create notice notification for the responsible person
         noticeService.createMaintenanceNotice(savedMaintenance, responsible);
 
         return savedMaintenance;
@@ -266,5 +268,318 @@ public class MaintenanceService {
             .orElseThrow(() -> new EntityNotFoundException("Maintenance not found"));
         
         return new MaintenanceDetailDto(maintenance);
+    }
+
+    @Transactional
+    public Maintenance submitMaintenanceForReview(
+        UUID maintenanceId, 
+        User currentUser
+    ) {
+        // Find existing maintenance
+        Maintenance maintenance = maintenanceRepository.findById(maintenanceId)
+            .orElseThrow(() -> new EntityNotFoundException("Maintenance not found"));
+        
+        // Validate that the current user is the responsible person
+        if (!maintenance.getResponsible().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Only the responsible person can submit maintenance for review");
+        }
+        
+        // Validate that maintenance is in progress
+        if (maintenance.getReviewStatus() != Maintenance.ReviewStatus.IN_PROGRESS) {
+            throw new RuntimeException("Maintenance must be in progress to submit for review");
+        }
+        
+        // Update maintenance status to pending review
+        maintenance.setReviewStatus(Maintenance.ReviewStatus.PENDING);
+        maintenance.setUpdatedAt(LocalDateTime.now());
+
+        Maintenance updatedMaintenance = maintenanceRepository.save(maintenance);
+
+        // Create audit log
+        createMaintenanceAuditLog(updatedMaintenance, currentUser);
+
+        // Send notification to creator (who assigned the maintenance)
+        sendMaintenanceReviewRequestNotification(updatedMaintenance, maintenance.getRequestedBy(), currentUser);
+
+        // Create notice notification for the creator
+        noticeService.createMaintenanceReviewRequestNotice(updatedMaintenance, maintenance.getRequestedBy());
+
+        return updatedMaintenance;
+    }
+
+
+
+
+
+
+
+    private void sendMaintenanceReviewRequestNotification(Maintenance maintenance, User reviewer, User creator) {
+        // Create a sent email record for the review request notification
+        SentEmail sentEmail = new SentEmail();
+        sentEmail.setSubject("Maintenance Review Request: " + maintenance.getCode());
+        sentEmail.setBody(createMaintenanceReviewRequestBody(maintenance, creator));
+        sentEmail.setUser(reviewer);
+        sentEmail.setCreatedAt(LocalDateTime.now());
+
+        sentEmailRepository.save(sentEmail);
+    }
+
+    private String createMaintenanceReviewRequestBody(Maintenance maintenance, User creator) {
+        return String.format(
+            "Dear %s,\n\n" +
+            "A maintenance request has been submitted for your review:\n\n" +
+            "Maintenance Code: %s\n" +
+            "Equipment: %s (Code: %s)\n" +
+            "Description: %s\n" +
+            "Maintenance Type: %s\n" +
+            "Priority: %s\n" +
+            "Responsible: %s\n" +
+            "Requested by: %s\n\n" +
+            "Please review and approve or reject this maintenance request.\n\n" +
+            "Best regards,\n" +
+            "Maintenance Management System",
+            maintenance.getReviewedBy() != null ? maintenance.getReviewedBy().getName() : "Administrator",
+            maintenance.getCode(),
+            maintenance.getEquipment().getName(),
+            maintenance.getEquipment().getCode(),
+            maintenance.getDescription(),
+            maintenance.getMaintenanceType().getName(),
+            maintenance.getPriority().name(),
+            maintenance.getResponsible().getName(),
+            creator.getName()
+        );
+    }
+
+
+
+    private void sendMaintenanceAssignmentNotification(Maintenance maintenance, User responsible, User creator) {
+        // Create a sent email record for the maintenance assignment notification
+        SentEmail sentEmail = new SentEmail();
+        sentEmail.setSubject("New Maintenance Assignment: " + maintenance.getCode());
+        sentEmail.setBody(createMaintenanceAssignmentBody(maintenance, creator));
+        sentEmail.setUser(responsible);
+        sentEmail.setCreatedAt(LocalDateTime.now());
+
+        sentEmailRepository.save(sentEmail);
+    }
+
+    private String createMaintenanceAssignmentBody(Maintenance maintenance, User creator) {
+        return String.format(
+            "Dear %s,\n\n" +
+            "You have been assigned a new maintenance request:\n\n" +
+            "Maintenance Code: %s\n" +
+            "Equipment: %s (Code: %s)\n" +
+            "Description: %s\n" +
+            "Maintenance Type: %s\n" +
+            "Priority: %s\n" +
+            "Requested by: %s\n\n" +
+            "Please review and take necessary actions.\n\n" +
+            "Best regards,\n" +
+            "Maintenance Management System",
+            maintenance.getResponsible().getName(),
+            maintenance.getCode(),
+            maintenance.getEquipment().getName(),
+            maintenance.getEquipment().getCode(),
+            maintenance.getDescription(),
+            maintenance.getMaintenanceType().getName(),
+            maintenance.getPriority().name(),
+            creator.getName()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getMaintenanceByReviewStatus(Maintenance.ReviewStatus reviewStatus) {
+        return maintenanceRepository.findByReviewStatus(reviewStatus).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getMaintenanceByResponsibleUser(UUID userId) {
+        return maintenanceRepository.findByResponsibleId(userId).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getMaintenanceByRequestedUser(UUID userId) {
+        return maintenanceRepository.findByRequestedById(userId).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getPendingReviewMaintenance() {
+        return maintenanceRepository.findByReviewStatus(Maintenance.ReviewStatus.PENDING).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getApprovedMaintenance() {
+        return maintenanceRepository.findByReviewStatus(Maintenance.ReviewStatus.APPROVED).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getInProgressMaintenance() {
+        return maintenanceRepository.findByReviewStatus(Maintenance.ReviewStatus.IN_PROGRESS).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceDetailDto> getRejectedMaintenance() {
+        return maintenanceRepository.findByReviewStatus(Maintenance.ReviewStatus.REJECTED).stream()
+            .map(MaintenanceDetailDto::new)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public Maintenance approveMaintenance(UUID maintenanceId, User currentUser) {
+        // Find existing maintenance
+        Maintenance maintenance = maintenanceRepository.findById(maintenanceId)
+            .orElseThrow(() -> new EntityNotFoundException("Maintenance not found"));
+        
+        // Validate that maintenance is pending review
+        if (maintenance.getReviewStatus() != Maintenance.ReviewStatus.PENDING) {
+            throw new RuntimeException("Maintenance is not pending review");
+        }
+        
+        // Validate that the current user is the creator (who assigned the maintenance)
+        if (!maintenance.getRequestedBy().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Only the creator can approve maintenance");
+        }
+        
+        // Update maintenance status to approved
+        maintenance.setReviewStatus(Maintenance.ReviewStatus.APPROVED);
+        maintenance.setRejectionReason(null);
+        maintenance.setReviewedBy(currentUser);
+        maintenance.setReviewedAt(LocalDateTime.now());
+        maintenance.setUpdatedAt(LocalDateTime.now());
+
+        Maintenance updatedMaintenance = maintenanceRepository.save(maintenance);
+
+        // Create audit log
+        createMaintenanceAuditLog(updatedMaintenance, currentUser);
+
+        // Send notification to the responsible person about approval
+        sendMaintenanceApprovalNotification(updatedMaintenance, currentUser);
+
+        // Create notice notification for the responsible person
+        noticeService.createMaintenanceApprovalNotice(updatedMaintenance, maintenance.getResponsible());
+
+        return updatedMaintenance;
+    }
+
+    @Transactional
+    public Maintenance rejectMaintenance(UUID maintenanceId, String rejectionReason, User currentUser) {
+        // Find existing maintenance
+        Maintenance maintenance = maintenanceRepository.findById(maintenanceId)
+            .orElseThrow(() -> new EntityNotFoundException("Maintenance not found"));
+        
+        // Validate that maintenance is pending review
+        if (maintenance.getReviewStatus() != Maintenance.ReviewStatus.PENDING) {
+            throw new RuntimeException("Maintenance is not pending review");
+        }
+        
+        // Validate that the current user is the creator (who assigned the maintenance)
+        if (!maintenance.getRequestedBy().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Only the creator can reject maintenance");
+        }
+        
+        // Validate rejection reason
+        if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+            throw new RuntimeException("Rejection reason is required");
+        }
+        
+        // Update maintenance status back to in progress for retry
+        maintenance.setReviewStatus(Maintenance.ReviewStatus.IN_PROGRESS);
+        maintenance.setRejectionReason(rejectionReason);
+        maintenance.setReviewedBy(currentUser);
+        maintenance.setReviewedAt(LocalDateTime.now());
+        maintenance.setUpdatedAt(LocalDateTime.now());
+
+        Maintenance updatedMaintenance = maintenanceRepository.save(maintenance);
+
+        // Create audit log
+        createMaintenanceAuditLog(updatedMaintenance, currentUser);
+
+        // Send notification to the responsible person about rejection with reason
+        sendMaintenanceRejectionNotification(updatedMaintenance, currentUser, rejectionReason);
+
+        // Create notice notification for the responsible person
+        noticeService.createMaintenanceRejectionNotice(updatedMaintenance, maintenance.getResponsible(), rejectionReason);
+
+        return updatedMaintenance;
+    }
+
+    private void sendMaintenanceApprovalNotification(Maintenance maintenance, User reviewer) {
+        // Create a sent email record for the approval notification
+        SentEmail sentEmail = new SentEmail();
+        sentEmail.setSubject("Maintenance Approved: " + maintenance.getCode());
+        sentEmail.setBody(createMaintenanceApprovalBody(maintenance, reviewer));
+        sentEmail.setUser(maintenance.getResponsible());
+        sentEmail.setCreatedAt(LocalDateTime.now());
+
+        sentEmailRepository.save(sentEmail);
+    }
+
+    private String createMaintenanceApprovalBody(Maintenance maintenance, User reviewer) {
+        return String.format(
+            "Dear %s,\n\n" +
+            "Your maintenance request has been APPROVED:\n\n" +
+            "Maintenance Code: %s\n" +
+            "Equipment: %s (Code: %s)\n" +
+            "Description: %s\n" +
+            "Approved by: %s\n" +
+            "Approval Date: %s\n\n" +
+            "Your maintenance request has been approved and is ready to proceed.\n\n" +
+            "Best regards,\n" +
+            "Maintenance Management System",
+            maintenance.getResponsible().getName(),
+            maintenance.getCode(),
+            maintenance.getEquipment().getName(),
+            maintenance.getEquipment().getCode(),
+            maintenance.getDescription(),
+            reviewer.getName(),
+            maintenance.getReviewedAt()
+        );
+    }
+
+    private void sendMaintenanceRejectionNotification(Maintenance maintenance, User reviewer, String rejectionReason) {
+        // Create a sent email record for the rejection notification
+        SentEmail sentEmail = new SentEmail();
+        sentEmail.setSubject("Maintenance Rejected: " + maintenance.getCode());
+        sentEmail.setBody(createMaintenanceRejectionBody(maintenance, reviewer, rejectionReason));
+        sentEmail.setUser(maintenance.getResponsible());
+        sentEmail.setCreatedAt(LocalDateTime.now());
+
+        sentEmailRepository.save(sentEmail);
+    }
+
+    private String createMaintenanceRejectionBody(Maintenance maintenance, User reviewer, String rejectionReason) {
+        return String.format(
+            "Dear %s,\n\n" +
+            "Your maintenance request has been REJECTED:\n\n" +
+            "Maintenance Code: %s\n" +
+            "Equipment: %s (Code: %s)\n" +
+            "Description: %s\n" +
+            "Rejected by: %s\n" +
+            "Rejection Date: %s\n" +
+            "Rejection Reason: %s\n\n" +
+            "The maintenance has been returned to IN_PROGRESS status so you can make the necessary adjustments and submit it again for review.\n\n" +
+            "Best regards,\n" +
+            "Maintenance Management System",
+            maintenance.getResponsible().getName(),
+            maintenance.getCode(),
+            maintenance.getEquipment().getName(),
+            maintenance.getEquipment().getCode(),
+            maintenance.getDescription(),
+            reviewer.getName(),
+            maintenance.getReviewedAt(),
+            rejectionReason
+        );
     }
 } 
