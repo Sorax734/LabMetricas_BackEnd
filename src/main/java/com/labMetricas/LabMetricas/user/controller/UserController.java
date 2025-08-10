@@ -157,6 +157,17 @@ public class UserController {
         return userService.getAllUsers();
     }
 
+    @GetMapping("/ButMe")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ResponseObject> getAllUsersButMe() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        // Log the attempt
+        logger.info("User {} attempting to retrieve all users excluding self", auth.getName());
+
+        return userService.getAllUsersButMe(auth.getName());
+    }
+
     @DeleteMapping("/{email}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ResponseObject> deleteUser(@PathVariable String email) {

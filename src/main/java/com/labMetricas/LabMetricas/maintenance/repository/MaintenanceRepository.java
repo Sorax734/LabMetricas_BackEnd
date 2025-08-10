@@ -24,10 +24,22 @@ public interface MaintenanceRepository extends JpaRepository<Maintenance, UUID> 
     
     // Find pending maintenance for a specific reviewer
     List<Maintenance> findByReviewStatusAndReviewedById(Maintenance.ReviewStatus reviewStatus, UUID reviewedById);
-    
+
     // Find maintenance created by user (ordered by creation date desc)
     List<Maintenance> findByRequestedByOrderByCreatedAtDesc(User requestedBy);
-    
+
     // Find maintenance assigned to user (ordered by creation date desc)
     List<Maintenance> findByResponsibleOrderByCreatedAtDesc(User responsible);
-} 
+
+    // Find maintenance created by user (ordered by creation date desc)
+    List<Maintenance> findByRequestedByAndScheduledMaintenanceIsNullOrderByCreatedAtDesc(User requestedBy); // Solicitudes
+    
+    // Find maintenance assigned to user (ordered by creation date desc)
+    List<Maintenance> findByResponsibleAndScheduledMaintenanceIsNullOrderByCreatedAtDesc(User responsible); // Solicitudes
+
+    // Find maintenance created by user (ordered by creation date desc)
+    List<Maintenance> findByRequestedByAndScheduledMaintenanceIsNotNullOrderByCreatedAtDesc(User requestedBy); // Programados
+
+    // Find maintenance assigned to user (ordered by creation date desc)
+    List<Maintenance> findByResponsibleAndScheduledMaintenanceIsNotNullOrderByCreatedAtDesc(User responsible); // Programados
+}

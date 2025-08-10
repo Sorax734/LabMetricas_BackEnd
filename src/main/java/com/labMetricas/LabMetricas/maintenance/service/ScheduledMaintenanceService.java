@@ -75,6 +75,7 @@ public class ScheduledMaintenanceService {
         maintenance.setEquipment(equipment);
         maintenance.setMaintenanceType(maintenanceType);
         maintenance.setResponsible(responsible);
+        maintenance.setRequestedBy(currentUser); // Set the creator
         maintenance.setCode(generateScheduledMaintenanceCode());
         maintenance.setCreatedAt(LocalDateTime.now());
         maintenance.setStatus(true);
@@ -306,4 +307,21 @@ public class ScheduledMaintenanceService {
         
         return new ScheduledMaintenanceDetailDto(maintenance, maintenance.getScheduledMaintenance());
     }
+
+    @Transactional(readOnly = true)
+    public List<ScheduledMaintenanceDetailDto> getMaintenanceCreatedByUser(User user) {
+        return maintenanceRepository.findByRequestedByAndScheduledMaintenanceIsNotNullOrderByCreatedAtDesc(user).stream()
+                .filter(maintenance -> maintenance.getScheduledMaintenance() != null)
+                .map(maintenance -> new ScheduledMaintenanceDetailDto(maintenance, maintenance.getScheduledMaintenance()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ScheduledMaintenanceDetailDto> getMaintenanceAssignedToUser(User user) {
+        return maintenanceRepository.findByResponsibleAndScheduledMaintenanceIsNotNullOrderByCreatedAtDesc(user).stream()
+                .filter(maintenance -> maintenance.getScheduledMaintenance() != null)
+                .map(maintenance -> new ScheduledMaintenanceDetailDto(maintenance, maintenance.getScheduledMaintenance()))
+                .collect(Collectors.toList());
+    }
+
 } 

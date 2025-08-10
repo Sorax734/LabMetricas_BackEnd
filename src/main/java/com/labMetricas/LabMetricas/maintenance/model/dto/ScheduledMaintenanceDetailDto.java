@@ -6,10 +6,12 @@ import com.labMetricas.LabMetricas.maintenance.model.FrequencyType;
 import com.labMetricas.LabMetricas.equipment.model.Equipment;
 import com.labMetricas.LabMetricas.MaintenanceType.model.MaintenanceType;
 import com.labMetricas.LabMetricas.user.model.User;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Data
 public class ScheduledMaintenanceDetailDto {
     private UUID id;
     private String code;
@@ -19,7 +21,9 @@ public class ScheduledMaintenanceDetailDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
-    
+    private String reviewStatus;
+    private String rejectionReason;
+
     // Equipment details
     private UUID equipmentId;
     private String equipmentName;
@@ -39,6 +43,16 @@ public class ScheduledMaintenanceDetailDto {
     private Integer frequencyValue;
     private LocalDateTime nextMaintenanceDate;
 
+    // Request and Review Details
+    private UUID requestedById;
+    private String requestedByName;
+    private String requestedByEmail;
+
+    private UUID reviewedById;
+    private String reviewedByName;
+    private String reviewedByEmail;
+    private LocalDateTime reviewedAt;
+
     public ScheduledMaintenanceDetailDto() {}
 
     public ScheduledMaintenanceDetailDto(Maintenance maintenance, ScheduledMaintenance scheduledMaintenance) {
@@ -50,7 +64,9 @@ public class ScheduledMaintenanceDetailDto {
         this.createdAt = maintenance.getCreatedAt();
         this.updatedAt = maintenance.getUpdatedAt();
         this.deletedAt = maintenance.getDeletedAt();
-        
+        this.reviewStatus = maintenance.getReviewStatus() != null ? maintenance.getReviewStatus().name() : null;
+        this.rejectionReason = maintenance.getRejectionReason();
+
         // Equipment details
         Equipment equipment = maintenance.getEquipment();
         if (equipment != null) {
@@ -79,6 +95,19 @@ public class ScheduledMaintenanceDetailDto {
             this.frequencyType = scheduledMaintenance.getFrequencyType();
             this.frequencyValue = scheduledMaintenance.getFrequencyValue().intValue();
             this.nextMaintenanceDate = scheduledMaintenance.getNextMaintenance();
+        }
+
+        // Request and Review Details
+        if (maintenance.getRequestedBy() != null) {
+            this.requestedById = maintenance.getRequestedBy().getId();
+            this.requestedByName = maintenance.getRequestedBy().getName();
+            this.requestedByEmail = maintenance.getRequestedBy().getEmail();
+        }
+
+        if (maintenance.getReviewedBy() != null) {
+            this.reviewedById = maintenance.getReviewedBy().getId();
+            this.reviewedByName = maintenance.getReviewedBy().getName();
+            this.reviewedByEmail = maintenance.getReviewedBy().getEmail();
         }
     }
 

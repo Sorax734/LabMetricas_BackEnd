@@ -439,14 +439,14 @@ public class MaintenanceService {
 
     @Transactional(readOnly = true)
     public List<MaintenanceDetailDto> getMaintenanceCreatedByUser(User user) {
-        return maintenanceRepository.findByRequestedByOrderByCreatedAtDesc(user).stream()
+        return maintenanceRepository.findByRequestedByAndScheduledMaintenanceIsNullOrderByCreatedAtDesc(user).stream()
             .map(MaintenanceDetailDto::new)
             .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<MaintenanceDetailDto> getMaintenanceAssignedToUser(User user) {
-        return maintenanceRepository.findByResponsibleOrderByCreatedAtDesc(user).stream()
+        return maintenanceRepository.findByResponsibleAndScheduledMaintenanceIsNullOrderByCreatedAtDesc(user).stream()
             .map(MaintenanceDetailDto::new)
             .collect(Collectors.toList());
     }

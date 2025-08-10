@@ -256,6 +256,26 @@ public class UserService {
         }
     }
 
+    public ResponseEntity<ResponseObject> getAllUsersButMe(String userEmail) {
+        try {
+            String normalized = userEmail.trim().toLowerCase();
+
+            List<UserDto> users = userRepository.findAllWithRoles().stream()
+                    .filter(u -> u.getEmail() == null || !normalized.equals(u.getEmail().trim().toLowerCase()))
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(
+                    new ResponseObject("Users retrieved successfully (excluding current)", users, TypeResponse.SUCCESS)
+            );
+        } catch (Exception e) {
+            logger.error("Error retrieving users", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    new ResponseObject("Error retrieving users", null, TypeResponse.ERROR)
+            );
+        }
+    }
+
     @Transactional
     public ResponseEntity<ResponseObject> deleteUser(UUID id) {
         try {
