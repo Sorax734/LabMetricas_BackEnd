@@ -70,7 +70,6 @@ public class UserController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ResponseObject> createUser(@Valid @RequestBody UserDto userDto) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
@@ -103,7 +102,6 @@ public class UserController {
     }
 
     @PutMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ResponseObject> updateUser(@Valid @RequestBody UserDto userDto) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
@@ -114,7 +112,6 @@ public class UserController {
     }
 
     @GetMapping("/{email}")
-    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ResponseObject> getUserByEmail(@PathVariable String email) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
@@ -125,7 +122,6 @@ public class UserController {
     }
 
     @PostMapping("/find-by-email")
-    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ResponseObject> findUserByEmail(@RequestBody Map<String, String> payload) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
@@ -147,7 +143,6 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ResponseObject> getAllUsers() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
@@ -158,7 +153,6 @@ public class UserController {
     }
 
     @GetMapping("/ButMe")
-    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ResponseObject> getAllUsersButMe() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
@@ -169,7 +163,6 @@ public class UserController {
     }
 
     @DeleteMapping("/{email}")
-    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ResponseObject> deleteUser(@PathVariable String email) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
