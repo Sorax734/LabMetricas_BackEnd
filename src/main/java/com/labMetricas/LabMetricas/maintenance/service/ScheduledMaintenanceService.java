@@ -59,6 +59,11 @@ public class ScheduledMaintenanceService {
         ScheduledMaintenanceRequestDto requestDto, 
         User currentUser
     ) {
+        // Log current user information
+        logger.info("Creating scheduled maintenance with currentUser: {} (ID: {})", 
+            currentUser != null ? currentUser.getEmail() : "NULL", 
+            currentUser != null ? currentUser.getId() : "NULL");
+        
         // Validate and fetch related entities
         Equipment equipment = equipmentRepository.findById(requestDto.getEquipmentId())
             .orElseThrow(() -> new EntityNotFoundException("Equipment not found"));
@@ -76,13 +81,26 @@ public class ScheduledMaintenanceService {
         maintenance.setMaintenanceType(maintenanceType);
         maintenance.setResponsible(responsible);
         maintenance.setRequestedBy(currentUser); // Set the creator
-        maintenance.setCode(generateMaintenanceCode(maintenanceType, true)); // Programmed maintenance
+        
+        logger.info("Set requestedBy to: {} (ID: {})", 
+            maintenance.getRequestedBy() != null ? maintenance.getRequestedBy().getEmail() : "NULL",
+            maintenance.getRequestedBy() != null ? maintenance.getRequestedBy().getId() : "NULL");
+        
+        // Generate the new format code
+        String generatedCode = generateMaintenanceCode(maintenanceType, true);
+        logger.info("Generated maintenance code: {}", generatedCode);
+        
+        maintenance.setCode(generatedCode); // Programmed maintenance
         maintenance.setCreatedAt(LocalDateTime.now());
         maintenance.setStatus(true);
         maintenance.setPriority(convertPriority(requestDto.getPriority()));
 
         // Save maintenance request
         Maintenance savedMaintenance = maintenanceRepository.save(maintenance);
+        
+        logger.info("Saved maintenance with code: {} and requestedBy: {}", 
+            savedMaintenance.getCode(), 
+            savedMaintenance.getRequestedBy() != null ? savedMaintenance.getRequestedBy().getEmail() : "NULL");
 
         // Create scheduled maintenance
         ScheduledMaintenance scheduledMaintenance = new ScheduledMaintenance();
@@ -103,12 +121,9 @@ public class ScheduledMaintenanceService {
         return savedMaintenance;
     }
 
-    public String generateScheduledMaintenanceCode() {
-        // Generate a unique scheduled maintenance code
-        return "SCHED-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
+
     
-    private String generateMaintenanceCode(MaintenanceType maintenanceType, boolean isProgrammed) {
+    public String generateMaintenanceCode(MaintenanceType maintenanceType, boolean isProgrammed) {
         // Generate a unique maintenance code with the format: YYYY-MM-DD-TYPE-P/NP-COUNTER
         LocalDateTime now = LocalDateTime.now();
         String date = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
@@ -122,10 +137,14 @@ public class ScheduledMaintenanceService {
         // Get counter for the specific type
         String counter = getNextCounter(isProgrammed);
         
-        return date + "-" + typeInitials + "-" + programType + "-" + counter;
+        String finalCode = date + "-" + typeInitials + "-" + programType + "-" + counter;
+        logger.info("Generated code: date={}, typeInitials={}, programType={}, counter={}, finalCode={}", 
+            date, typeInitials, programType, counter, finalCode);
+        
+        return finalCode;
     }
     
-    private String getMaintenanceTypeInitials(MaintenanceType maintenanceType) {
+    public String getMaintenanceTypeInitials(MaintenanceType maintenanceType) {
         // Get the first 3 characters of the maintenance type name
         String name = maintenanceType.getName();
         if (name.length() >= 3) {
@@ -135,15 +154,19 @@ public class ScheduledMaintenanceService {
         }
     }
     
-    private String getNextCounter(boolean isProgrammed) {
+    public String getNextCounter(boolean isProgrammed) {
         // Get the next counter for the specific program type
         long count;
         if (isProgrammed) {
             count = maintenanceRepository.countByScheduledMaintenanceIsNotNull();
+            logger.info("Count for programmed maintenance: {}", count);
         } else {
             count = maintenanceRepository.countByScheduledMaintenanceIsNull();
+            logger.info("Count for non-programmed maintenance: {}", count);
         }
-        return String.format("%04d", count + 1);
+        String counter = String.format("%04d", count + 1);
+        logger.info("Generated counter: {}", counter);
+        return counter;
     }
 
     public FrequencyType convertFrequencyType(ScheduledMaintenanceRequestDto.FrequencyType dtoFrequencyType) {
@@ -348,7 +371,20 @@ public class ScheduledMaintenanceService {
 
     @Transactional(readOnly = true)
     public List<ScheduledMaintenanceDetailDto> getMaintenanceCreatedByUser(User user) {
-        return maintenanceRepository.findByRequestedByAndScheduledMaintenanceIsNotNullOrderByCreatedAtDesc(user).stream()
+        logger.info("Searching for maintenance created by user: {} (ID: {})", user.getEmail(), user.getId());
+        
+        List<Maintenance> maintenanceList = maintenanceRepository.findByRequestedByAndScheduledMaintenanceIsNotNullOrderByCreatedAtDesc(user);
+        logger.info("Found {} maintenance records for user", maintenanceList.size());
+        
+        // Log each maintenance found for debugging
+        for (Maintenance maintenance : maintenanceList) {
+            logger.info("Maintenance ID: {}, Code: {}, RequestedBy: {}", 
+                maintenance.getId(), 
+                maintenance.getCode(),
+                maintenance.getRequestedBy() != null ? maintenance.getRequestedBy().getEmail() : "NULL");
+        }
+        
+        return maintenanceList.stream()
                 .filter(maintenance -> maintenance.getScheduledMaintenance() != null)
                 .map(maintenance -> new ScheduledMaintenanceDetailDto(maintenance, maintenance.getScheduledMaintenance()))
                 .collect(Collectors.toList());

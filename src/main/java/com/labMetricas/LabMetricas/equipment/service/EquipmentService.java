@@ -71,6 +71,10 @@ public class EquipmentService {
     // Create new equipment
     @Transactional
     public EquipmentDto createEquipmentWithMaintenances(EquipmentController.EquipmentWithMaintenancesDto payload, User currentUser) {
+        // Log current user information
+        System.out.println("Creating equipment with maintenances - CurrentUser: " + 
+            (currentUser != null ? currentUser.getEmail() + " (ID: " + currentUser.getId() + ")" : "NULL"));
+        
         Equipment equipment = mapToEntity(payload.equipment());
         equipment.setCreatedAt(LocalDateTime.now());
         equipment.setStatus(true);
@@ -89,12 +93,19 @@ public class EquipmentService {
             maintenance.setEquipment(savedEquipment);
             maintenance.setMaintenanceType(maintenanceType);
             maintenance.setResponsible(responsible);
-            maintenance.setCode(scheduledMaintenanceService.generateScheduledMaintenanceCode());
+            maintenance.setRequestedBy(currentUser); // Set the creator
+            maintenance.setCode(scheduledMaintenanceService.generateMaintenanceCode(maintenanceType, true));
             maintenance.setCreatedAt(LocalDateTime.now());
             maintenance.setStatus(true);
             maintenance.setPriority(scheduledMaintenanceService.convertPriority(dto.getPriority()));
 
             Maintenance savedMaintenance = maintenanceRepository.saveAndFlush(maintenance);
+            
+            // Log to verify requestedBy was saved
+            System.out.println("Saved maintenance - requestedBy: " + 
+                (savedMaintenance.getRequestedBy() != null ? 
+                    savedMaintenance.getRequestedBy().getEmail() + " (ID: " + savedMaintenance.getRequestedBy().getId() + ")" : 
+                    "NULL"));
 
             // Create scheduled maintenance
             ScheduledMaintenance scheduledMaintenance = new ScheduledMaintenance();

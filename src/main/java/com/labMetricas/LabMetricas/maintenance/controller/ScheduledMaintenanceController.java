@@ -81,6 +81,9 @@ public class ScheduledMaintenanceController {
         User currentUser = userRepository.findByEmail(authentication.getName())
             .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Log for debugging
+        System.out.println("Controller - Current user: " + currentUser.getEmail() + " (ID: " + currentUser.getId() + ")");
+
         // Create scheduled maintenance request
         Maintenance maintenance = scheduledMaintenanceService.createScheduledMaintenance(
             requestDto, 
@@ -211,6 +214,9 @@ public class ScheduledMaintenanceController {
         // Get current user from authentication
         User currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Log for debugging
+        System.out.println("Controller - Searching for maintenance created by: " + currentUser.getEmail() + " (ID: " + currentUser.getId() + ")");
 
         List<ScheduledMaintenanceDetailDto> maintenanceList = scheduledMaintenanceService.getMaintenanceCreatedByUser(currentUser);
 
