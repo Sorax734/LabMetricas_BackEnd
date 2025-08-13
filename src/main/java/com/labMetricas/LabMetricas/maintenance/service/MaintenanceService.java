@@ -72,7 +72,7 @@ public class MaintenanceService {
         maintenance.setMaintenanceType(maintenanceType);
         maintenance.setResponsible(responsible);
         maintenance.setRequestedBy(currentUser); // Set the creator
-        maintenance.setCode(generateMaintenanceCode());
+        maintenance.setCode(generateMaintenanceCode(maintenanceType, false)); // Non-programmed maintenance
         maintenance.setCreatedAt(LocalDateTime.now());
         maintenance.setStatus(true);
         maintenance.setPriority(convertPriority(requestDto.getPriority()));
@@ -93,9 +93,42 @@ public class MaintenanceService {
         return savedMaintenance;
     }
 
-    private String generateMaintenanceCode() {
-        // Generate a unique maintenance code
-        return "MAINT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    private String generateMaintenanceCode(MaintenanceType maintenanceType, boolean isProgrammed) {
+        // Generate a unique maintenance code with the format: YYYY-MM-DD-TYPE-P/NP-COUNTER
+        LocalDateTime now = LocalDateTime.now();
+        String date = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        
+        // Get maintenance type initials (first 3 characters)
+        String typeInitials = getMaintenanceTypeInitials(maintenanceType);
+        
+        // Determine if it's programmed (P) or non-programmed (NP)
+        String programType = isProgrammed ? "P" : "NP";
+        
+        // Get counter for the specific type
+        String counter = getNextCounter(isProgrammed);
+        
+        return date + "-" + typeInitials + "-" + programType + "-" + counter;
+    }
+    
+    private String getMaintenanceTypeInitials(MaintenanceType maintenanceType) {
+        // Get the first 3 characters of the maintenance type name
+        String name = maintenanceType.getName();
+        if (name.length() >= 3) {
+            return name.substring(0, 3).toUpperCase();
+        } else {
+            return name.toUpperCase();
+        }
+    }
+    
+    private String getNextCounter(boolean isProgrammed) {
+        // Get the next counter for the specific program type
+        long count;
+        if (isProgrammed) {
+            count = maintenanceRepository.countByScheduledMaintenanceIsNotNull();
+        } else {
+            count = maintenanceRepository.countByScheduledMaintenanceIsNull();
+        }
+        return String.format("%04d", count + 1);
     }
 
     private void createMaintenanceAuditLog(Maintenance maintenance, User user) {

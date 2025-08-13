@@ -42,4 +42,8 @@ public interface MaintenanceRepository extends JpaRepository<Maintenance, UUID> 
 
     // Find maintenance assigned to user (ordered by creation date desc)
     List<Maintenance> findByResponsibleAndScheduledMaintenanceIsNotNullOrderByCreatedAtDesc(User responsible); // Programados
+    
+    // Count maintenance by program type (P or NP)
+    long countByScheduledMaintenanceIsNotNull(); // Count programmed maintenance
+    long countByScheduledMaintenanceIsNull(); // Count non-programmed maintenance
 }
