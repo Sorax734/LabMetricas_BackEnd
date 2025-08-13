@@ -222,49 +222,37 @@ public class DataInitializer implements CommandLineRunner {
         List<MaintenanceType> maintenanceTypes = maintenanceTypeRepository.findAll();
 
         if (!users.isEmpty() && !equipments.isEmpty() && !maintenanceTypes.isEmpty()) {
-            // Reduce the number of maintenance requests to match available maintenance types
-            MaintenanceRequestDto[] maintenanceRequests = {
-                createMaintenanceRequestDto(
-                    equipments.get(0), 
-                    maintenanceTypes.get(0), 
-                    users.get(0), 
-                    "Routine calibration for precision equipment", 
-                    MaintenanceRequestDto.Priority.LOW
-                ),
-                createMaintenanceRequestDto(
-                    equipments.get(1), 
-                    maintenanceTypes.get(1), 
-                    users.get(1), 
-                    "Urgent bearing replacement needed", 
-                    MaintenanceRequestDto.Priority.HIGH
-                )
-            };
+            // Create only one non-programmed maintenance (NP)
+            MaintenanceRequestDto maintenanceRequest = createMaintenanceRequestDto(
+                equipments.get(0), // CNC Milling Machine
+                maintenanceTypes.get(1), // Corrective
+                users.get(0), // José García
+                "Urgent bearing replacement needed", 
+                MaintenanceRequestDto.Priority.HIGH
+            );
 
-            // Simulate maintenance request creation
-            for (MaintenanceRequestDto requestDto : maintenanceRequests) {
-                try {
-                    // Find the current user to simulate request creation
-                    User currentUser = userRepository.findByEmail(requestDto.getResponsibleUserId().toString())
-                        .orElse(users.get(0));
+            try {
+                // Find the current user to simulate request creation
+                User currentUser = userRepository.findByEmail(maintenanceRequest.getResponsibleUserId().toString())
+                    .orElse(users.get(0));
 
-                    // Create maintenance request
-                    Maintenance maintenance = new Maintenance();
-                    maintenance.setDescription(requestDto.getDescription());
-                    maintenance.setEquipment(equipmentRepository.findById(requestDto.getEquipmentId())
-                        .orElseThrow(() -> new EntityNotFoundException("Equipment not found")));
-                    maintenance.setMaintenanceType(maintenanceTypeRepository.findById(requestDto.getMaintenanceTypeId())
-                        .orElseThrow(() -> new EntityNotFoundException("Maintenance Type not found")));
-                    maintenance.setResponsible(currentUser);
-                    maintenance.setCode(generateMaintenanceCode());
-                    maintenance.setCreatedAt(LocalDateTime.now());
-                    maintenance.setStatus(true);
-                    maintenance.setPriority(Maintenance.Priority.valueOf(requestDto.getPriority().name()));
+                // Create maintenance request
+                Maintenance maintenance = new Maintenance();
+                maintenance.setDescription(maintenanceRequest.getDescription());
+                maintenance.setEquipment(equipmentRepository.findById(maintenanceRequest.getEquipmentId())
+                    .orElseThrow(() -> new EntityNotFoundException("Equipment not found")));
+                maintenance.setMaintenanceType(maintenanceTypeRepository.findById(maintenanceRequest.getMaintenanceTypeId())
+                    .orElseThrow(() -> new EntityNotFoundException("Maintenance Type not found")));
+                maintenance.setResponsible(currentUser);
+                maintenance.setCode(generateMaintenanceCode(maintenanceTypes.get(1), false)); // Non-programmed maintenance
+                maintenance.setCreatedAt(LocalDateTime.now());
+                maintenance.setStatus(true);
+                maintenance.setPriority(Maintenance.Priority.valueOf(maintenanceRequest.getPriority().name()));
 
-                    maintenanceRepository.save(maintenance);
-                    logger.info("Created sample maintenance request: {}", maintenance.getCode());
-                } catch (Exception e) {
-                    logger.error("Error creating sample maintenance request", e);
-                }
+                maintenanceRepository.save(maintenance);
+                logger.info("Created sample non-programmed maintenance request: {}", maintenance.getCode());
+            } catch (Exception e) {
+                logger.error("Error creating sample non-programmed maintenance request", e);
             }
         }
     }
@@ -422,19 +410,7 @@ public class DataInitializer implements CommandLineRunner {
         List<MaintenanceType> maintenanceTypes = maintenanceTypeRepository.findAll();
 
         if (!users.isEmpty() && !equipments.isEmpty() && !maintenanceTypes.isEmpty()) {
-            // Example 1: Weekly maintenance for CNC Machine
-            createScheduledMaintenance(
-                equipments.get(0), // CNC Milling Machine
-                maintenanceTypes.get(0), // Preventive
-                users.get(0), // José García
-                "Limpieza semanal de la máquina CNC - Lubricación de componentes móviles",
-                Maintenance.Priority.MEDIUM,
-                "WEEKLY",
-                1,
-                calculateNextMaintenanceDate("WEEKLY", 1)
-            );
-
-            // Example 2: Monthly maintenance for Spectrophotometer
+            // Create only one programmed maintenance (P)
             createScheduledMaintenance(
                 equipments.get(1), // Spectrophotometer
                 maintenanceTypes.get(0), // Preventive
@@ -446,55 +422,7 @@ public class DataInitializer implements CommandLineRunner {
                 calculateNextMaintenanceDate("MONTHLY", 1)
             );
 
-            // Example 3: Quarterly maintenance for Industrial Laser Cutter
-            createScheduledMaintenance(
-                equipments.get(2), // Industrial Laser Cutter
-                maintenanceTypes.get(0), // Preventive
-                users.get(2), // Carlos López
-                "Mantenimiento trimestral del cortador láser - Limpieza de ópticas y alineación",
-                Maintenance.Priority.CRITICAL,
-                "MONTHLY",
-                3,
-                calculateNextMaintenanceDate("MONTHLY", 3)
-            );
-
-            // Example 4: Annual maintenance for Precision Balance
-            createScheduledMaintenance(
-                equipments.get(3), // Precision Balance
-                maintenanceTypes.get(0), // Preventive
-                users.get(3), // Ana Martínez
-                "Calibración anual de la balanza de precisión - Certificación metrológica",
-                Maintenance.Priority.HIGH,
-                "YEARLY",
-                1,
-                calculateNextMaintenanceDate("YEARLY", 1)
-            );
-
-            // Example 5: Daily maintenance for Safety Shower Station
-            createScheduledMaintenance(
-                equipments.get(4), // Safety Shower Station
-                maintenanceTypes.get(0), // Preventive
-                users.get(4), // Luis Hernández
-                "Verificación diaria de la ducha de seguridad - Prueba de funcionamiento",
-                Maintenance.Priority.LOW,
-                "DAILY",
-                1,
-                calculateNextMaintenanceDate("DAILY", 1)
-            );
-
-            // Example 6: Bi-weekly maintenance for Electric Forklift
-            createScheduledMaintenance(
-                equipments.get(5), // Electric Forklift
-                maintenanceTypes.get(0), // Preventive
-                users.get(5), // Laura Sánchez
-                "Mantenimiento quincenal del montacargas eléctrico - Revisión de baterías y neumáticos",
-                Maintenance.Priority.MEDIUM,
-                "WEEKLY",
-                2,
-                calculateNextMaintenanceDate("WEEKLY", 2)
-            );
-
-            logger.info("Created {} scheduled maintenance examples", 6);
+            logger.info("Created 1 scheduled maintenance example");
         }
     }
 
