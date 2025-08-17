@@ -100,11 +100,11 @@ public class DataInitializer implements CommandLineRunner {
 
     private void createEquipmentCategories() {
         List<String> categories = Arrays.asList(
-            "Machinery", 
-            "Electronic Equipment", 
-            "Laboratory Instruments", 
-            "Safety Equipment", 
-            "Vehicles"
+            "Equipos de Medición", 
+            "Equipos de Calibración", 
+            "Equipos de Laboratorio", 
+            "Equipos de Seguridad", 
+            "Equipos Informáticos"
         );
 
         categories.forEach(categoryName -> {
@@ -124,10 +124,10 @@ public class DataInitializer implements CommandLineRunner {
                 null,
                 true,
                 "Lab Métricas SAS de CV",
-                "Av. Principal 123, CDMX",
-                "555-1234567",
-                "contacto@labmetricas.com",
-                "NIF123456",
+                "Av. Tecnológico 123, Zona Industrial, CDMX",
+                "55-1234-5678",
+                "mantenimiento@labmetricas.com",
+                "LME-2024-001",
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 null // Equipments
@@ -135,11 +135,23 @@ public class DataInitializer implements CommandLineRunner {
             new MaintenanceProvider(
                 null,
                 true,
-                "Proveedor Ejemplo",
-                "Calle 456, Monterrey",
-                "818-9876543",
-                "proveedor@ejemplo.com",
-                "NIF654321",
+                "Servicios Técnicos Especializados",
+                "Calle Metrología 456, Monterrey, NL",
+                "81-9876-5432",
+                "contacto@serviciostecnicos.com",
+                "STE-2024-002",
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null
+            ),
+            new MaintenanceProvider(
+                null,
+                true,
+                "Calibración y Mantenimiento Industrial",
+                "Blvd. Industrial 789, Guadalajara, Jal",
+                "33-5555-7777",
+                "info@calibracionindustrial.com",
+                "CMI-2024-003",
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 null
@@ -161,41 +173,31 @@ public class DataInitializer implements CommandLineRunner {
         List<MaintenanceProvider> maintenanceProviders = maintenanceProviderRepository.findAll();
 
         if (!users.isEmpty() && !categories.isEmpty()) {
-            String[] equipmentNames = {
-                "CNC Milling Machine", 
-                "Spectrophotometer", 
-                "Industrial Laser Cutter", 
-                "Precision Balance", 
-                "Safety Shower Station",
-                "Electric Forklift",
-                "Thermal Imaging Camera",
-                "Robotic Arm",
-                "Ultrasonic Cleaner",
-                "Portable Generator"
-            };
-
-            for (int i = 0; i < equipmentNames.length; i++) {
-                Equipment equipment = new Equipment();
-                equipment.setName(equipmentNames[i]);
-                equipment.setLocation("Main Facility - Zone " + (i % 3 + 1));
-                equipment.setBrand("TechPro");
-                equipment.setModel("Series " + (i + 1));
-                equipment.setCode("" + (i + 1));
-                equipment.setSerialNumber("Serie" + (i + 1));
-                equipment.setRemarks("High-precision equipment for industrial use");
-                equipment.setStatus(true);
-                equipment.setCreatedAt(LocalDateTime.now());
-                equipment.setUpdatedAt(LocalDateTime.now());
-                
-                // Cycle through users and categories
-                equipment.setAssignedTo(users.get(i % users.size()));
-                equipment.setEquipmentCategory(categories.get(i % categories.size()));
-                equipment.setMaintenanceProvider(maintenanceProviders.get(i % maintenanceProviders.size()));
-
-                equipmentRepository.save(equipment);
-                logger.info("Created equipment: {}", equipmentNames[i]);
-            }
+            // Solo 3 equipos, uno para cada usuario
+            createEquipment("Micrómetro Digital", "Laboratorio Principal - Área A", "Mitutoyo", "MD-500", "MD001", "MIT-2024-001", "Micrómetro digital de alta precisión para mediciones de 0-25mm", categories.get(0), users.get(0), maintenanceProviders.get(0));
+            createEquipment("Máquina de Medir por Coordenadas", "Sala de Calibración - Centro", "Zeiss", "MMC-500", "MMC001", "ZEI-2024-002", "Máquina de medición por coordenadas de alta precisión", categories.get(1), users.get(1), maintenanceProviders.get(1));
+            createEquipment("Microscopio Metrológico", "Laboratorio Secundario - Mesa 1", "Olympus", "MM-600", "MM001", "OLY-2024-003", "Microscopio metrológico con cámara digital", categories.get(2), users.get(2), maintenanceProviders.get(2));
         }
+    }
+
+    private void createEquipment(String name, String location, String brand, String model, String code, String serialNumber, String remarks, EquipmentCategory category, User assignedTo, MaintenanceProvider maintenanceProvider) {
+        Equipment equipment = new Equipment();
+        equipment.setName(name);
+        equipment.setLocation(location);
+        equipment.setBrand(brand);
+        equipment.setModel(model);
+        equipment.setCode(code);
+        equipment.setSerialNumber(serialNumber);
+        equipment.setRemarks(remarks);
+        equipment.setStatus(true);
+        equipment.setCreatedAt(LocalDateTime.now());
+        equipment.setUpdatedAt(LocalDateTime.now());
+        equipment.setAssignedTo(assignedTo);
+        equipment.setEquipmentCategory(category);
+        equipment.setMaintenanceProvider(maintenanceProvider);
+
+        equipmentRepository.save(equipment);
+        logger.info("Created equipment: {}", name);
     }
 
     private void createMaintenanceTypes() {
@@ -224,10 +226,10 @@ public class DataInitializer implements CommandLineRunner {
         if (!users.isEmpty() && !equipments.isEmpty() && !maintenanceTypes.isEmpty()) {
             // Create only one non-programmed maintenance (NP)
             MaintenanceRequestDto maintenanceRequest = createMaintenanceRequestDto(
-                equipments.get(0), // CNC Milling Machine
+                equipments.get(0), // Micrómetro Digital
                 maintenanceTypes.get(1), // Corrective
-                users.get(0), // José García
-                "Urgent bearing replacement needed", 
+                users.get(0), // Antonio García González
+                "Reparación urgente del display digital del micrómetro - Error en lectura de mediciones", 
                 MaintenanceRequestDto.Priority.HIGH
             );
 
@@ -278,73 +280,32 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createDefaultUsers() {
-        // Administradores del Sistema
+        // Administrador del Sistema
         createUserIfNotExists(
-            "José García", 
-            "jose.admin@labmetricas.com", 
+            "Antonio García González", 
+            "antoniogarciagonzalez212@gmail.com", 
             "Admin2024#Secure", 
             "ADMIN",
-            "System Administrator"
+            "Administrador del Sistema"
         );
 
+        // Supervisor
         createUserIfNotExists(
-            "María Rodríguez", 
-            "maria.admin@labmetricas.com", 
-            "AdminM2024$Safe", 
-            "ADMIN",
-            "Chief Administrator"
-        );
-
-        // Supervisores
-        createUserIfNotExists(
-            "Carlos López", 
-            "carlos.super@labmetricas.com", 
+            "Supervisor UTEZ", 
+            "20233tn106@utez.edu.mx", 
             "Super2024#Lab", 
             "SUPERVISOR",
-            "Senior Supervisor"
+            "Supervisor de Laboratorio"
         );
 
+        // Operador
         createUserIfNotExists(
-            "Ana Martínez", 
-            "ana.super@labmetricas.com", 
-            "Super2024$Control", 
-            "SUPERVISOR",
-            "Operations Supervisor"
-        );
-
-        // Operadores
-        createUserIfNotExists(
-            "Luis Hernández", 
-            "luis.op@labmetricas.com", 
+            "Desarrollador LabMétricas", 
+            "labmetricasdev@gmail.com", 
             "Oper2024#Lab", 
             "OPERADOR",
-            "Field Operator"
+            "Operador de Laboratorio"
         );
-
-        createUserIfNotExists(
-            "Laura Sánchez", 
-            "laura.op@labmetricas.com", 
-            "Oper2024$Work", 
-            "OPERADOR",
-            "Technical Operator"
-        );
-
-        // Usuarios adicionales para pruebas
-        List<String[]> additionalUsers = Arrays.asList(
-            new String[]{"Roberto Díaz", "roberto.super@labmetricas.com", "Super2024#Test", "SUPERVISOR", "Test Supervisor"},
-            new String[]{"Patricia Flores", "patricia.op@labmetricas.com", "Oper2024#Test", "OPERADOR", "Test Operator"},
-            new String[]{"Miguel Torres", "miguel.op@labmetricas.com", "Oper2024$Test", "OPERADOR", "Backup Operator"},
-            new String[]{"Miguel Torres", "antonio734contacto@gmail.com", "Oper2024$Test", "OPERADOR", "Backup Operator"}        );
-
-        for (String[] userData : additionalUsers) {
-            createUserIfNotExists(
-                userData[0],
-                userData[1],
-                userData[2],
-                userData[3],
-                userData[4]
-            );
-        }
     }
 
     private void createUserIfNotExists(
@@ -412,14 +373,14 @@ public class DataInitializer implements CommandLineRunner {
         if (!users.isEmpty() && !equipments.isEmpty() && !maintenanceTypes.isEmpty()) {
             // Create only one programmed maintenance (P)
             createScheduledMaintenance(
-                equipments.get(1), // Spectrophotometer
+                equipments.get(1), // Máquina de Medir por Coordenadas
                 maintenanceTypes.get(0), // Preventive
-                users.get(1), // María Rodríguez
-                "Calibración mensual del espectrofotómetro - Verificación de precisión",
+                users.get(1), // Supervisor UTEZ
+                "Calibración anual de máquina de medir por coordenadas - Verificación de trazabilidad metrológica",
                 Maintenance.Priority.HIGH,
-                "MONTHLY",
+                "YEARLY",
                 1,
-                calculateNextMaintenanceDate("MONTHLY", 1)
+                calculateNextMaintenanceDate("YEARLY", 1)
             );
 
             logger.info("Created 1 scheduled maintenance example");
