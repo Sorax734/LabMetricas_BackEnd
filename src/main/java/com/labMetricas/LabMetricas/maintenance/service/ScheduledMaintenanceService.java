@@ -2,6 +2,7 @@ package com.labMetricas.LabMetricas.maintenance.service;
 
 import com.labMetricas.LabMetricas.auditLog.model.AuditLog;
 import com.labMetricas.LabMetricas.auditLog.repository.AuditLogRepository;
+import com.labMetricas.LabMetricas.config.ProductionEmailService;
 import com.labMetricas.LabMetricas.equipment.model.Equipment;
 import com.labMetricas.LabMetricas.equipment.repository.EquipmentRepository;
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
@@ -53,6 +54,9 @@ public class ScheduledMaintenanceService {
 
     @Autowired
     private SentEmailRepository sentEmailRepository;
+
+    @Autowired
+    private ProductionEmailService productionEmailService;
 
     @Transactional
     public Maintenance createScheduledMaintenance(
@@ -121,8 +125,6 @@ public class ScheduledMaintenanceService {
         return savedMaintenance;
     }
 
-
-    
     public String generateMaintenanceCode(MaintenanceType maintenanceType, boolean isProgrammed) {
         // Generate a unique maintenance code with the format: YYYY-MM-DD-TYPE-P/NP-COUNTER
         LocalDateTime now = LocalDateTime.now();
@@ -202,34 +204,22 @@ public class ScheduledMaintenanceService {
     }
 
     public void sendScheduledMaintenanceNotification(Maintenance maintenance, User responsible) {
-        // Create a sent email record for the scheduled maintenance notification
-        SentEmail sentEmail = new SentEmail();
-        sentEmail.setSubject("New Scheduled Maintenance: " + maintenance.getCode());
-        sentEmail.setBody(createScheduledMaintenanceNotificationBody(maintenance));
-        sentEmail.setUser(responsible);
-        sentEmail.setCreatedAt(LocalDateTime.now());
-
-        sentEmailRepository.save(sentEmail);
-    }
-
-    private String createScheduledMaintenanceNotificationBody(Maintenance maintenance) {
-        return String.format(
-            "Dear %s,\n\n" +
-            "A new scheduled maintenance has been created for the following equipment:\n\n" +
-            "Maintenance Code: %s\n" +
-            "Equipment: %s (Code: %s)\n" +
-            "Description: %s\n" +
-            "Maintenance Type: %s\n\n" +
-            "Please review and take necessary actions.\n\n" +
-            "Best regards,\n" +
-            "Maintenance Management System",
-            maintenance.getResponsible().getName(),
-            maintenance.getCode(),
-            maintenance.getEquipment().getName(),
-            maintenance.getEquipment().getCode(),
-            maintenance.getDescription(),
-            maintenance.getMaintenanceType().getName()
-        );
+        // Send real email notification using ProductionEmailService
+        try {
+            String maintenanceType = maintenance.getMaintenanceType().getName();
+            String scheduledDate = maintenance.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            
+            productionEmailService.sendMaintenanceNotification(
+                responsible.getEmail(),
+                responsible.getName(),
+                maintenanceType,
+                scheduledDate
+            );
+            
+            logger.info("Scheduled maintenance notification email sent to: {}", responsible.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send scheduled maintenance notification email to: {}", responsible.getEmail(), e);
+        }
     }
 
     @Transactional
@@ -253,31 +243,27 @@ public class ScheduledMaintenanceService {
     }
 
     private void sendScheduledMaintenanceStatusUpdateNotification(Maintenance maintenance, User responsible) {
-        // Create a sent email record for the scheduled maintenance status update
-        SentEmail sentEmail = new SentEmail();
-        sentEmail.setSubject("Scheduled Maintenance Status Update: " + maintenance.getCode());
-        sentEmail.setBody(createScheduledMaintenanceStatusUpdateBody(maintenance));
-        sentEmail.setUser(responsible);
-        sentEmail.setCreatedAt(LocalDateTime.now());
-
-        sentEmailRepository.save(sentEmail);
-    }
-
-    private String createScheduledMaintenanceStatusUpdateBody(Maintenance maintenance) {
-        return String.format(
-            "Dear %s,\n\n" +
-            "The status of scheduled maintenance %s has been updated.\n\n" +
-            "Equipment: %s (Code: %s)\n" +
-            "Current Status: %s\n\n" +
-            "Please review the changes.\n\n" +
-            "Best regards,\n" +
-            "Maintenance Management System",
-            maintenance.getResponsible().getName(),
-            maintenance.getCode(),
-            maintenance.getEquipment().getName(),
-            maintenance.getEquipment().getCode(),
-            maintenance.getStatus() ? "Active" : "Inactive"
-        );
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Actualización de Estado de Mantenimiento Programado";
+            String details = String.format(
+                "El estado del mantenimiento programado %s para el equipo %s ha sido actualizado a: %s",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                maintenance.getStatus() ? "Activo" : "Inactivo"
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                responsible.getEmail(),
+                responsible.getName(),
+                action,
+                details
+            );
+            
+            logger.info("Scheduled maintenance status update email sent to: {}", responsible.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send scheduled maintenance status update email to: {}", responsible.getEmail(), e);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -331,7 +317,34 @@ public class ScheduledMaintenanceService {
         // Create audit log
         createScheduledMaintenanceAuditLog(updatedMaintenance, currentUser);
 
+        // Send notification about maintenance update
+        sendScheduledMaintenanceUpdateNotification(updatedMaintenance, currentUser);
+
         return updatedMaintenance;
+    }
+
+    private void sendScheduledMaintenanceUpdateNotification(Maintenance maintenance, User currentUser) {
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Actualización de Mantenimiento Programado";
+            String details = String.format(
+                "El mantenimiento programado %s para el equipo %s ha sido actualizado por %s",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                currentUser.getName()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                maintenance.getResponsible().getEmail(),
+                maintenance.getResponsible().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Scheduled maintenance update email sent to: {}", maintenance.getResponsible().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send scheduled maintenance update email to: {}", maintenance.getResponsible().getEmail(), e);
+        }
     }
 
     @Transactional
@@ -354,7 +367,34 @@ public class ScheduledMaintenanceService {
         // Create audit log
         createScheduledMaintenanceAuditLog(deletedMaintenance, currentUser);
 
+        // Send notification about maintenance deletion
+        sendScheduledMaintenanceDeletionNotification(deletedMaintenance, currentUser);
+
         return deletedMaintenance;
+    }
+
+    private void sendScheduledMaintenanceDeletionNotification(Maintenance maintenance, User currentUser) {
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Eliminación de Mantenimiento Programado";
+            String details = String.format(
+                "El mantenimiento programado %s para el equipo %s ha sido marcado como eliminado por %s",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                currentUser.getName()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                maintenance.getResponsible().getEmail(),
+                maintenance.getResponsible().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Scheduled maintenance deletion email sent to: {}", maintenance.getResponsible().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send scheduled maintenance deletion email to: {}", maintenance.getResponsible().getEmail(), e);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -397,5 +437,4 @@ public class ScheduledMaintenanceService {
                 .map(maintenance -> new ScheduledMaintenanceDetailDto(maintenance, maintenance.getScheduledMaintenance()))
                 .collect(Collectors.toList());
     }
-
 } 

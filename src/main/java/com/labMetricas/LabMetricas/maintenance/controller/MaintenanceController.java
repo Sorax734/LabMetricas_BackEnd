@@ -434,18 +434,13 @@ public class MaintenanceController {
         @Valid @RequestBody MaintenanceRejectionDto rejectionDto,
         Authentication authentication
     ) {
-        // Get current user from authentication
         User currentUser = userRepository.findByEmail(authentication.getName())
             .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Reject maintenance
         Maintenance maintenance = maintenanceService.rejectMaintenance(
             maintenanceId,
             rejectionDto.getRejectionReason(),
             currentUser
         );
-
-        // Prepare response
         ResponseObject responseObject = new ResponseObject(
             "Maintenance rejected successfully", 
             maintenance,

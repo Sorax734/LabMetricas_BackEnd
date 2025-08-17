@@ -3,8 +3,7 @@ package com.labMetricas.LabMetricas.security;
 import com.labMetricas.LabMetricas.passwordResetToken.model.PasswordResetToken;
 import com.labMetricas.LabMetricas.passwordResetToken.repository.PasswordResetTokenRepository;
 import com.labMetricas.LabMetricas.user.repository.UserRepository;
-import com.resend.Resend;
-import com.resend.services.emails.model.SendEmailRequest;
+import com.labMetricas.LabMetricas.config.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,13 +31,10 @@ public class PasswordResetService {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private Resend resend;
+    private EmailService emailService;
 
     @Value("${frontend.url}")
     private String frontendUrl;
-
-    @Value("${resend.default.sender}")
-    private String defaultSender;
 
     @Transactional
     public boolean initiatePasswordReset(String email) {
@@ -77,19 +73,17 @@ public class PasswordResetService {
             passwordResetTokenRepository.save(resetToken);
 
             // Send reset email with token
-            SendEmailRequest sendEmailRequest = SendEmailRequest.builder()
-                .from(defaultSender)
-                .to(email)
-                .subject("Password Reset Token")
-                .html(buildResetEmailBody(token))
-                .build();
+            boolean emailSent = emailService.sendEmail(
+                email, 
+                "Password Reset Token", 
+                buildResetEmailBody(token)
+            );
 
-            try {
-                resend.emails().send(sendEmailRequest);
+            if (emailSent) {
                 logger.info("Password reset token sent to: {}", email);
                 return true;
-            } catch (Exception emailEx) {
-                logger.error("Failed to send email via Resend", emailEx);
+            } else {
+                logger.error("Failed to send email via Resend");
                 // Log the reset token for development/testing
                 logger.warn("DEVELOPMENT MODE: Reset Token for {}: {}", email, token);
                 return true; // Return true to simulate successful token generation
@@ -149,18 +143,16 @@ public class PasswordResetService {
                 User user = resetTokenOptional.get().getUser();
                 
                 // Send confirmation email
-                SendEmailRequest sendEmailRequest = SendEmailRequest.builder()
-                    .from(defaultSender)
-                    .to(user.getEmail())
-                    .subject("Password Successfully Reset")
-                    .html(buildPasswordResetConfirmationEmailBody(user.getName()))
-                    .build();
+                boolean emailSent = emailService.sendEmail(
+                    user.getEmail(),
+                    "Password Successfully Reset",
+                    buildPasswordResetConfirmationEmailBody(user.getName())
+                );
 
-                try {
-                    resend.emails().send(sendEmailRequest);
+                if (emailSent) {
                     logger.info("Password reset confirmation email sent to: {}", user.getEmail());
-                } catch (Exception emailEx) {
-                    logger.error("Failed to send confirmation email via Resend", emailEx);
+                } else {
+                    logger.error("Failed to send confirmation email via Resend");
                 }
             }
         } catch (Exception e) {
@@ -169,29 +161,101 @@ public class PasswordResetService {
     }
 
     private String buildResetEmailBody(String token) {
-        return String.format(
-            "<html><body>" +
-            "<h2>Password Reset Request</h2>" +
-            "<p>We received a request to reset your password. Here is your password reset token:</p>" +
-            "<div style='background-color: #f4f4f4; padding: 15px; border-radius: 5px; font-family: monospace; text-align: center; font-size: 18px;'>" +
-            "%s" +
-            "</div>" +
-            "<p>This token will expire in 1 hour. If you did not request a password reset, please ignore this email.</p>" +
-            "<p>Do not share this token with anyone.</p>" +
-            "</body></html>", 
-            token
-        );
+        return String.format("""
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+                    .header { background-color: #007bff; color: white; padding: 30px; text-align: center; }
+                    .content { padding: 30px; }
+                    .token-box { background-color: #f8f9fa; border: 2px solid #007bff; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+                    .token { font-family: 'Courier New', monospace; font-size: 20px; font-weight: bold; color: #007bff; letter-spacing: 2px; }
+                    .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0; }
+                    .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+                    .button { display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🔐 Restablecimiento de Contraseña</h1>
+                        <p>LabMetricas - Sistema de Gestión</p>
+                    </div>
+                    <div class="content">
+                        <h2>Hola,</h2>
+                        <p>Hemos recibido una solicitud para restablecer tu contraseña en LabMetricas.</p>
+                        
+                        <div class="token-box">
+                            <h3>Tu código de verificación:</h3>
+                            <div class="token">%s</div>
+                            <p><small>Este código expira en 1 hora</small></p>
+                        </div>
+                        
+                        <div class="warning">
+                            <strong>⚠️ Importante:</strong>
+                            <ul>
+                                <li>No compartas este código con nadie</li>
+                                <li>Si no solicitaste este cambio, ignora este email</li>
+                                <li>El código solo es válido por 1 hora</li>
+                            </ul>
+                        </div>
+                        
+                        <p>Si tienes alguna pregunta, no dudes en contactar a nuestro equipo de soporte.</p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2024 LabMetricas. Todos los derechos reservados.</p>
+                        <p>Este es un email automático, por favor no respondas a este mensaje.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """, token);
     }
 
     private String buildPasswordResetConfirmationEmailBody(String userName) {
-        return String.format(
-            "<html><body>" +
-            "<h2>Password Reset Confirmation</h2>" +
-            "<p>Hello %s,</p>" +
-            "<p>Your password has been successfully reset. If you did not make this change, please contact our support team immediately.</p>" +
-            "<p>If this was you, no further action is required.</p>" +
-            "</body></html>", 
-            userName
-        );
+        return String.format("""
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+                    .header { background-color: #28a745; color: white; padding: 30px; text-align: center; }
+                    .content { padding: 30px; }
+                    .success-box { background-color: #d4edda; border: 2px solid #28a745; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+                    .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>✅ Contraseña Actualizada</h1>
+                        <p>LabMetricas - Sistema de Gestión</p>
+                    </div>
+                    <div class="content">
+                        <h2>Hola %s,</h2>
+                        
+                        <div class="success-box">
+                            <h3>¡Tu contraseña ha sido actualizada exitosamente!</h3>
+                            <p>Tu cuenta en LabMetricas ahora tiene una nueva contraseña.</p>
+                        </div>
+                        
+                        <p><strong>Información importante:</strong></p>
+                        <ul>
+                            <li>Tu contraseña ha sido cambiada recientemente</li>
+                            <li>Si no realizaste este cambio, contacta inmediatamente a nuestro equipo de soporte</li>
+                            <li>Para mayor seguridad, te recomendamos cambiar tu contraseña regularmente</li>
+                        </ul>
+                        
+                        <p>Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos.</p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2024 LabMetricas. Todos los derechos reservados.</p>
+                        <p>Este es un email automático, por favor no respondas a este mensaje.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """, userName);
     }
 } 

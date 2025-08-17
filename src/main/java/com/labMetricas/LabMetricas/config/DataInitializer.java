@@ -181,6 +181,12 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createEquipment(String name, String location, String brand, String model, String code, String serialNumber, String remarks, EquipmentCategory category, User assignedTo, MaintenanceProvider maintenanceProvider) {
+        // Check if equipment already exists by name
+        if (equipmentRepository.findByName(name).isPresent()) {
+            logger.info("Equipment already exists: {}", name);
+            return;
+        }
+
         Equipment equipment = new Equipment();
         equipment.setName(name);
         equipment.setLocation(location);
@@ -284,6 +290,15 @@ public class DataInitializer implements CommandLineRunner {
         createUserIfNotExists(
             "Antonio García González", 
             "antoniogarciagonzalez212@gmail.com", 
+            "Admin2024#Secure", 
+            "ADMIN",
+            "Administrador del Sistema"
+        );
+
+        // Administrador del Sistema - Amador Casillas
+        createUserIfNotExists(
+            "Amador Casillas", 
+            "amadorcasillasdr@gmail.com", 
             "Admin2024#Secure", 
             "ADMIN",
             "Administrador del Sistema"

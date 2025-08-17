@@ -6,6 +6,7 @@ import com.labMetricas.LabMetricas.MaintenanceProvider.model.MaintenanceProvider
 import com.labMetricas.LabMetricas.MaintenanceProvider.repository.MaintenanceProviderRepository;
 import com.labMetricas.LabMetricas.MaintenanceType.model.MaintenanceType;
 import com.labMetricas.LabMetricas.MaintenanceType.repository.MaintenanceTypeRepository;
+import com.labMetricas.LabMetricas.config.ProductionEmailService;
 import com.labMetricas.LabMetricas.enums.TypeResponse;
 import com.labMetricas.LabMetricas.equipment.controller.EquipmentController;
 import com.labMetricas.LabMetricas.equipment.model.Equipment;
@@ -22,6 +23,8 @@ import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import com.labMetricas.LabMetricas.util.ResponseObject;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class EquipmentService {
+    private static final Logger logger = LoggerFactory.getLogger(EquipmentService.class);
 
     @Autowired
     private EquipmentRepository equipmentRepository;
@@ -58,6 +62,9 @@ public class EquipmentService {
     @Autowired
     private ScheduledMaintenanceService scheduledMaintenanceService;
 
+    @Autowired
+    private ProductionEmailService productionEmailService;
+
     // Create new equipment
     @Transactional
     public EquipmentDto createEquipment(EquipmentDto equipmentDto) {
@@ -65,6 +72,10 @@ public class EquipmentService {
         equipment.setCreatedAt(LocalDateTime.now());
         equipment.setStatus(true);
         Equipment savedEquipment = equipmentRepository.save(equipment);
+        
+        // Send notification to assigned user
+        sendEquipmentAssignmentNotification(savedEquipment);
+        
         return mapToDto(savedEquipment);
     }
 
@@ -72,8 +83,8 @@ public class EquipmentService {
     @Transactional
     public EquipmentDto createEquipmentWithMaintenances(EquipmentController.EquipmentWithMaintenancesDto payload, User currentUser) {
         // Log current user information
-        System.out.println("Creating equipment with maintenances - CurrentUser: " + 
-            (currentUser != null ? currentUser.getEmail() + " (ID: " + currentUser.getId() + ")" : "NULL"));
+        logger.info("Creating equipment with maintenances - CurrentUser: {}", 
+            currentUser != null ? currentUser.getEmail() + " (ID: " + currentUser.getId() + ")" : "NULL");
         
         Equipment equipment = mapToEntity(payload.equipment());
         equipment.setCreatedAt(LocalDateTime.now());
@@ -102,10 +113,10 @@ public class EquipmentService {
             Maintenance savedMaintenance = maintenanceRepository.saveAndFlush(maintenance);
             
             // Log to verify requestedBy was saved
-            System.out.println("Saved maintenance - requestedBy: " + 
-                (savedMaintenance.getRequestedBy() != null ? 
+            logger.info("Saved maintenance - requestedBy: {}", 
+                savedMaintenance.getRequestedBy() != null ? 
                     savedMaintenance.getRequestedBy().getEmail() + " (ID: " + savedMaintenance.getRequestedBy().getId() + ")" : 
-                    "NULL"));
+                    "NULL");
 
             // Create scheduled maintenance
             ScheduledMaintenance scheduledMaintenance = new ScheduledMaintenance();
@@ -123,6 +134,9 @@ public class EquipmentService {
             // Send notification
             scheduledMaintenanceService.sendScheduledMaintenanceNotification(savedMaintenance, responsible);
         }
+
+        // Send notification to assigned user about new equipment
+        sendEquipmentAssignmentNotification(savedEquipment);
 
         return mapToDto(savedEquipment);
     }
@@ -157,6 +171,9 @@ public class EquipmentService {
         Equipment existingEquipment = equipmentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Equipment not found with id: " + id));
 
+        // Store old assigned user for notification
+        User oldAssignedUser = existingEquipment.getAssignedTo();
+
         // Update fields
         existingEquipment.setName(equipmentDto.getName());
         existingEquipment.setCode(equipmentDto.getCode());
@@ -168,14 +185,19 @@ public class EquipmentService {
         existingEquipment.setUpdatedAt(LocalDateTime.now());
 
         // Update related entities
-        existingEquipment.setAssignedTo(userRepository.findById(equipmentDto.getAssignedToId())
-                .orElseThrow(() -> new EntityNotFoundException("User not found")));
+        User newAssignedUser = userRepository.findById(equipmentDto.getAssignedToId())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        existingEquipment.setAssignedTo(newAssignedUser);
         existingEquipment.setEquipmentCategory(equipmentCategoryRepository.findById(equipmentDto.getEquipmentCategoryId())
                 .orElseThrow(() -> new EntityNotFoundException("Equipment Category not found")));
         existingEquipment.setMaintenanceProvider(maintenanceProviderRepository.findById(equipmentDto.getMaintenanceProviderId())
                 .orElseThrow(() -> new EntityNotFoundException("Maintenance Provider not found")));
 
         Equipment updatedEquipment = equipmentRepository.save(existingEquipment);
+        
+        // Send notification about equipment update
+        sendEquipmentUpdateNotification(updatedEquipment, oldAssignedUser, newAssignedUser);
+        
         return mapToDto(updatedEquipment);
     }
 
@@ -185,10 +207,15 @@ public class EquipmentService {
         Equipment equipment = equipmentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Equipment not found with id: " + id));
 
+        boolean oldStatus = equipment.getStatus();
         equipment.setStatus(!equipment.getStatus());
         equipment.setUpdatedAt(LocalDateTime.now());
 
         Equipment updatedEquipment = equipmentRepository.save(equipment);
+        
+        // Send notification about status change
+        sendEquipmentStatusChangeNotification(updatedEquipment, oldStatus);
+        
         return mapToDto(updatedEquipment);
     }
 
@@ -200,7 +227,10 @@ public class EquipmentService {
 
         equipment.setStatus(false);
         equipment.setDeletedAt(LocalDateTime.now());
-        equipmentRepository.save(equipment);
+        Equipment deletedEquipment = equipmentRepository.save(equipment);
+        
+        // Send notification about equipment deletion
+        sendEquipmentDeletionNotification(deletedEquipment);
     }
 
     // Restore soft-deleted equipment
@@ -212,6 +242,10 @@ public class EquipmentService {
         equipment.setStatus(true);
         equipment.setDeletedAt(null);
         Equipment restoredEquipment = equipmentRepository.save(equipment);
+        
+        // Send notification about equipment restoration
+        sendEquipmentRestorationNotification(restoredEquipment);
+        
         return mapToDto(restoredEquipment);
     }
 
@@ -255,5 +289,146 @@ public class EquipmentService {
         dto.setMaintenanceProviderId(equipment.getMaintenanceProvider().getId());
 
         return dto;
+    }
+
+    // Email notification methods
+    private void sendEquipmentAssignmentNotification(Equipment equipment) {
+        try {
+            String action = "Nuevo Equipo Asignado";
+            String details = String.format(
+                "Se te ha asignado un nuevo equipo: %s (Código: %s). " +
+                "Ubicación: %s, Marca: %s, Modelo: %s",
+                equipment.getName(),
+                equipment.getCode(),
+                equipment.getLocation(),
+                equipment.getBrand(),
+                equipment.getModel()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                equipment.getAssignedTo().getEmail(),
+                equipment.getAssignedTo().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Equipment assignment email sent to: {}", equipment.getAssignedTo().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send equipment assignment email to: {}", equipment.getAssignedTo().getEmail(), e);
+        }
+    }
+
+    private void sendEquipmentUpdateNotification(Equipment equipment, User oldAssignedUser, User newAssignedUser) {
+        try {
+            String action = "Equipo Actualizado";
+            String details = String.format(
+                "El equipo %s (Código: %s) ha sido actualizado. " +
+                "Nuevo nombre: %s, Nueva ubicación: %s",
+                equipment.getCode(),
+                equipment.getCode(),
+                equipment.getName(),
+                equipment.getLocation()
+            );
+            
+            // Notify new assigned user
+            if (newAssignedUser != null) {
+                productionEmailService.sendActionConfirmation(
+                    newAssignedUser.getEmail(),
+                    newAssignedUser.getName(),
+                    action,
+                    details
+                );
+                logger.info("Equipment update email sent to new assigned user: {}", newAssignedUser.getEmail());
+            }
+            
+            // Notify old assigned user if different
+            if (oldAssignedUser != null && !oldAssignedUser.getId().equals(newAssignedUser.getId())) {
+                String oldUserAction = "Equipo Reasignado";
+                String oldUserDetails = String.format(
+                    "El equipo %s (Código: %s) ya no está asignado a ti. " +
+                    "Ha sido reasignado a otro usuario.",
+                    equipment.getCode(),
+                    equipment.getCode()
+                );
+                
+                productionEmailService.sendActionConfirmation(
+                    oldAssignedUser.getEmail(),
+                    oldAssignedUser.getName(),
+                    oldUserAction,
+                    oldUserDetails
+                );
+                logger.info("Equipment reassignment email sent to old assigned user: {}", oldAssignedUser.getEmail());
+            }
+        } catch (Exception e) {
+            logger.error("Failed to send equipment update email", e);
+        }
+    }
+
+    private void sendEquipmentStatusChangeNotification(Equipment equipment, boolean oldStatus) {
+        try {
+            String action = "Cambio de Estado de Equipo";
+            String details = String.format(
+                "El estado del equipo %s (Código: %s) ha cambiado de %s a %s",
+                equipment.getName(),
+                equipment.getCode(),
+                oldStatus ? "Activo" : "Inactivo",
+                equipment.getStatus() ? "Activo" : "Inactivo"
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                equipment.getAssignedTo().getEmail(),
+                equipment.getAssignedTo().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Equipment status change email sent to: {}", equipment.getAssignedTo().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send equipment status change email to: {}", equipment.getAssignedTo().getEmail(), e);
+        }
+    }
+
+    private void sendEquipmentDeletionNotification(Equipment equipment) {
+        try {
+            String action = "Equipo Eliminado";
+            String details = String.format(
+                "El equipo %s (Código: %s) ha sido marcado como eliminado del sistema",
+                equipment.getName(),
+                equipment.getCode()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                equipment.getAssignedTo().getEmail(),
+                equipment.getAssignedTo().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Equipment deletion email sent to: {}", equipment.getAssignedTo().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send equipment deletion email to: {}", equipment.getAssignedTo().getEmail(), e);
+        }
+    }
+
+    private void sendEquipmentRestorationNotification(Equipment equipment) {
+        try {
+            String action = "Equipo Restaurado";
+            String details = String.format(
+                "El equipo %s (Código: %s) ha sido restaurado y está nuevamente activo en el sistema",
+                equipment.getName(),
+                equipment.getCode()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                equipment.getAssignedTo().getEmail(),
+                equipment.getAssignedTo().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Equipment restoration email sent to: {}", equipment.getAssignedTo().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send equipment restoration email to: {}", equipment.getAssignedTo().getEmail(), e);
+        }
     }
 } 

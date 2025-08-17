@@ -7,8 +7,7 @@ import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import com.labMetricas.LabMetricas.user.model.dto.ChangePasswordDto;
 import com.labMetricas.LabMetricas.user.model.dto.UserDto;
 import com.labMetricas.LabMetricas.util.ResponseObject;
-import com.resend.Resend;
-import com.resend.services.emails.model.SendEmailRequest;
+import com.labMetricas.LabMetricas.config.ProductionEmailService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,10 +41,7 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private Resend resend;
-
-    @Value("${resend.default.sender}")
-    private String defaultSender;
+    private ProductionEmailService productionEmailService;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -79,23 +75,28 @@ public class UserService {
     // Method to send welcome email with temporary password
     private void sendWelcomeEmail(String email, String temporaryPassword, String name) {
         try {
-            // Create a stylish, informative welcome email
-            SendEmailRequest sendEmailRequest = SendEmailRequest.builder()
-                .from(defaultSender)
-                .to(email)
-                .subject("Bienvenido a LabMetricas - Tus Credenciales de Acceso")
-                .html(buildWelcomeEmailBody(name, email, temporaryPassword))
-                .build();
-
-            resend.emails().send(sendEmailRequest);
-            logger.info("Welcome email sent to: {}", email);
+            // Use ProductionEmailService for welcome email
+            boolean emailSent = productionEmailService.sendWelcomeEmail(email, name);
+            
+            if (emailSent) {
+                logger.info("Welcome email sent to: {}", email);
+                
+                // Send additional email with temporary password
+                String subject = "Tus Credenciales de Acceso - LabMetricas";
+                String htmlContent = buildTemporaryPasswordEmailBody(name, email, temporaryPassword);
+                
+                productionEmailService.sendCustomEmail(email, subject, htmlContent);
+                logger.info("Temporary password email sent to: {}", email);
+            } else {
+                logger.error("Failed to send welcome email to: {}", email);
+            }
         } catch (Exception e) {
             logger.error("Failed to send welcome email to: {}", email, e);
         }
     }
 
     // Helper method to build a stylish welcome email body
-    private String buildWelcomeEmailBody(String name, String email, String temporaryPassword) {
+    private String buildTemporaryPasswordEmailBody(String name, String email, String temporaryPassword) {
         return String.format(
             "<html>" +
             "<body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;'>" +
@@ -128,43 +129,24 @@ public class UserService {
                     new ResponseObject("Email already exists", null, TypeResponse.ERROR)
                 );
             }
-
-            // Create new user
             User user = new User();
             user.setName(userDto.getName());
             user.setEmail(userDto.getEmail());
             user.setPosition(userDto.getPosition());
             user.setPhone(userDto.getPhone());
-            user.setStatus(userDto.getStatus());
-            
-            // Set role
+            user.setStatus(userDto.getStatus());       
             user.setRole(roleRepository.findById(userDto.getRoleId())
                 .orElseThrow(() -> new RuntimeException("Role not found")));
-
-            // Generate or use provided password
             String rawPassword = userDto.getPassword() != null && !userDto.getPassword().isEmpty() 
                 ? userDto.getPassword() 
                 : generateSecurePassword();
-
-            // Encode password
             user.setPassword(passwordEncoder.encode(rawPassword));
-            
-            // Set timestamps
             user.setCreatedAt(LocalDateTime.now());
             user.setUpdatedAt(LocalDateTime.now());
-
-            // Save user
             User savedUser = userRepository.save(user);
-
-            // Convert to DTO for response
             UserDto responseDto = convertToDto(savedUser);
-
-            // Always set the temporary password in the response
             responseDto.setTemporaryPassword(rawPassword);
-
-            // Send welcome email with temporary password
             sendWelcomeEmail(savedUser.getEmail(), rawPassword, savedUser.getName());
-
             return ResponseEntity.status(HttpStatus.CREATED).body(
                 new ResponseObject("User created successfully", responseDto, TypeResponse.SUCCESS)
             );
@@ -182,6 +164,9 @@ public class UserService {
             // Find existing user
             User existingUser = userRepository.findById(userDto.getId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Store old email for notification
+            String oldEmail = existingUser.getEmail();
 
             // Update user details
             existingUser.setName(userDto.getName());
@@ -208,6 +193,9 @@ public class UserService {
 
             // Save updated user
             User updatedUser = userRepository.save(existingUser);
+
+            // Send notification about user update
+            sendUserUpdateNotification(updatedUser, oldEmail);
 
             // Convert to DTO for response
             UserDto responseDto = convertToDto(updatedUser);
@@ -299,27 +287,29 @@ public class UserService {
     }
 
     @Transactional
-    public ResponseEntity<ResponseObject> changePassword(ChangePasswordDto dto) {
+    public ResponseEntity<ResponseObject> changePassword(ChangePasswordDto changePasswordDto) {
         try {
             // Get current authenticated user
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String currentUsername = authentication.getName();
-
-            // Find user by email
-            User user = userRepository.findByEmail(currentUsername)
+            String currentUserEmail = authentication.getName();
+            
+            User currentUser = userRepository.findByEmail(currentUserEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Validate current password
-            if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+            // Verify current password
+            if (!passwordEncoder.matches(changePasswordDto.getCurrentPassword(), currentUser.getPassword())) {
                 return ResponseEntity.badRequest().body(
                     new ResponseObject("Current password is incorrect", null, TypeResponse.ERROR)
                 );
             }
 
-            // Encode and set new password
-            user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
-            user.setUpdatedAt(LocalDateTime.now());
-            userRepository.save(user);
+            // Update password
+            currentUser.setPassword(passwordEncoder.encode(changePasswordDto.getNewPassword()));
+            currentUser.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(currentUser);
+
+            // Send password change confirmation email
+            sendPasswordChangeConfirmation(currentUser);
 
             return ResponseEntity.ok(
                 new ResponseObject("Password changed successfully", null, TypeResponse.SUCCESS)
@@ -329,6 +319,97 @@ public class UserService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 new ResponseObject("Error changing password", null, TypeResponse.ERROR)
             );
+        }
+    }
+
+    @Transactional
+    public ResponseEntity<ResponseObject> toggleUserStatus(UUID userId) {
+        try {
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+            boolean oldStatus = user.getStatus();
+            user.setStatus(!user.getStatus());
+            user.setUpdatedAt(LocalDateTime.now());
+            User updatedUser = userRepository.save(user);
+
+            // Send status change notification
+            sendUserStatusChangeNotification(updatedUser, oldStatus);
+
+            return ResponseEntity.ok(
+                new ResponseObject("User status updated successfully", convertToDto(updatedUser), TypeResponse.SUCCESS)
+            );
+        } catch (Exception e) {
+            logger.error("Error toggling user status", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new ResponseObject("Error updating user status", null, TypeResponse.ERROR)
+            );
+        }
+    }
+
+    // Email notification methods
+    private void sendUserUpdateNotification(User user, String oldEmail) {
+        try {
+            String action = "Perfil de Usuario Actualizado";
+            String details = String.format(
+                "Tu perfil de usuario ha sido actualizado. " +
+                "Nombre: %s, Posición: %s, Teléfono: %s",
+                user.getName(),
+                user.getPosition(),
+                user.getPhone()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                user.getEmail(),
+                user.getName(),
+                action,
+                details
+            );
+            
+            logger.info("User update email sent to: {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send user update email to: {}", user.getEmail(), e);
+        }
+    }
+
+    private void sendPasswordChangeConfirmation(User user) {
+        try {
+            String action = "Contraseña Cambiada";
+            String details = "Tu contraseña ha sido cambiada exitosamente. " +
+                           "Si no realizaste este cambio, contacta inmediatamente al soporte técnico.";
+            
+            productionEmailService.sendActionConfirmation(
+                user.getEmail(),
+                user.getName(),
+                action,
+                details
+            );
+            
+            logger.info("Password change confirmation email sent to: {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send password change confirmation email to: {}", user.getEmail(), e);
+        }
+    }
+
+    private void sendUserStatusChangeNotification(User user, boolean oldStatus) {
+        try {
+            String action = "Estado de Usuario Cambiado";
+            String details = String.format(
+                "Tu estado de usuario ha cambiado de %s a %s",
+                oldStatus ? "Activo" : "Inactivo",
+                user.getStatus() ? "Activo" : "Inactivo"
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                user.getEmail(),
+                user.getName(),
+                action,
+                details
+            );
+            
+            logger.info("User status change email sent to: {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send user status change email to: {}", user.getEmail(), e);
         }
     }
 

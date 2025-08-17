@@ -2,6 +2,7 @@ package com.labMetricas.LabMetricas.maintenance.service;
 
 import com.labMetricas.LabMetricas.auditLog.model.AuditLog;
 import com.labMetricas.LabMetricas.auditLog.repository.AuditLogRepository;
+import com.labMetricas.LabMetricas.config.ProductionEmailService;
 import com.labMetricas.LabMetricas.equipment.model.Equipment;
 import com.labMetricas.LabMetricas.equipment.repository.EquipmentRepository;
 import com.labMetricas.LabMetricas.maintenance.model.Maintenance;
@@ -16,6 +17,8 @@ import com.labMetricas.LabMetricas.user.repository.UserRepository;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceRequestDto;
 import com.labMetricas.LabMetricas.maintenance.model.dto.MaintenanceDetailDto;
 import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +31,7 @@ import java.util.ArrayList;
 
 @Service
 public class MaintenanceService {
+    private static final Logger logger = LoggerFactory.getLogger(MaintenanceService.class);
 
     @Autowired
     private MaintenanceRepository maintenanceRepository;
@@ -49,6 +53,9 @@ public class MaintenanceService {
 
     @Autowired
     private NoticeService noticeService;
+
+    @Autowired
+    private ProductionEmailService productionEmailService;
 
     @Transactional
     public Maintenance createMaintenanceRequest(
@@ -141,35 +148,23 @@ public class MaintenanceService {
     }
 
     private void sendMaintenanceNotification(Maintenance maintenance, User responsible) {
-        // Create a sent email record for the maintenance notification
-        SentEmail sentEmail = new SentEmail();
-        sentEmail.setSubject("New Maintenance Request: " + maintenance.getCode());
-        sentEmail.setBody(createMaintenanceNotificationBody(maintenance));
-        sentEmail.setUser(responsible);
-        sentEmail.setCreatedAt(LocalDateTime.now());
-
-        sentEmailRepository.save(sentEmail);
+        // Send real email notification using ProductionEmailService
+        try {
+            String maintenanceType = maintenance.getMaintenanceType().getName();
+            String scheduledDate = maintenance.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            
+            productionEmailService.sendMaintenanceNotification(
+                responsible.getEmail(),
+                responsible.getName(),
+                maintenanceType,
+                scheduledDate
+            );
+            
+            logger.info("Maintenance notification email sent to: {}", responsible.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send maintenance notification email to: {}", responsible.getEmail(), e);
+        }
     }
-
-    private String createMaintenanceNotificationBody(Maintenance maintenance) {
-        return String.format(
-            "Dear %s,\n\n" +
-            "A new maintenance request has been created for the following equipment:\n\n" +
-            "Maintenance Code: %s\n" +
-            "Equipment: %s (Code: %s)\n" +
-            "Description: %s\n" +
-            "Maintenance Type: %s\n\n" +
-            "Please review and take necessary actions.\n\n" +
-            "Best regards,\n" +
-            "Maintenance Management System",
-            maintenance.getResponsible().getName(),
-            maintenance.getCode(),
-            maintenance.getEquipment().getName(),
-            maintenance.getEquipment().getCode(),
-            maintenance.getDescription(),
-            maintenance.getMaintenanceType().getName()
-        );
-    }   
 
     @Transactional
     public Maintenance updateMaintenanceStatus(UUID maintenanceId, User currentUser) {
@@ -197,31 +192,27 @@ public class MaintenanceService {
     }
 
     private void sendMaintenanceStatusUpdateNotification(Maintenance maintenance, User responsible) {
-        // Create a sent email record for the maintenance status update
-        SentEmail sentEmail = new SentEmail();
-        sentEmail.setSubject("Maintenance Request Status Update: " + maintenance.getCode());
-        sentEmail.setBody(createMaintenanceStatusUpdateBody(maintenance));
-        sentEmail.setUser(responsible);
-        sentEmail.setCreatedAt(LocalDateTime.now());
-
-        sentEmailRepository.save(sentEmail);
-    }
-
-    private String createMaintenanceStatusUpdateBody(Maintenance maintenance) {
-        return String.format(
-            "Dear %s,\n\n" +
-            "The status of maintenance request %s has been updated.\n\n" +
-            "Equipment: %s (Code: %s)\n" +
-            "Current Status: %s\n\n" +
-            "Please review the changes.\n\n" +
-            "Best regards,\n" +
-            "Maintenance Management System",
-            maintenance.getResponsible().getName(),
-            maintenance.getCode(),
-            maintenance.getEquipment().getName(),
-            maintenance.getEquipment().getCode(),
-            maintenance.getStatus() ? "Active" : "Inactive"
-        );
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Actualización de Estado de Mantenimiento";
+            String details = String.format(
+                "El mantenimiento %s para el equipo %s ha cambiado de estado a: %s",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                maintenance.getStatus() ? "Activo" : "Inactivo"
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                responsible.getEmail(),
+                responsible.getName(),
+                action,
+                details
+            );
+            
+            logger.info("Maintenance status update email sent to: {}", responsible.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send maintenance status update email to: {}", responsible.getEmail(), e);
+        }
     }
 
     private Maintenance.Priority convertPriority(MaintenanceRequestDto.Priority dtoPriority) {
@@ -270,7 +261,34 @@ public class MaintenanceService {
         // Create audit log
         createMaintenanceAuditLog(updatedMaintenance, currentUser);
 
+        // Send notification about maintenance update
+        sendMaintenanceUpdateNotification(updatedMaintenance, currentUser);
+
         return updatedMaintenance;
+    }
+
+    private void sendMaintenanceUpdateNotification(Maintenance maintenance, User currentUser) {
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Actualización de Mantenimiento";
+            String details = String.format(
+                "El mantenimiento %s para el equipo %s ha sido actualizado por %s",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                currentUser.getName()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                maintenance.getResponsible().getEmail(),
+                maintenance.getResponsible().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Maintenance update email sent to: {}", maintenance.getResponsible().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send maintenance update email to: {}", maintenance.getResponsible().getEmail(), e);
+        }
     }
 
     @Transactional
@@ -293,7 +311,34 @@ public class MaintenanceService {
         // Create audit log
         createMaintenanceAuditLog(deletedMaintenance, currentUser);
 
+        // Send notification about maintenance deletion
+        sendMaintenanceDeletionNotification(deletedMaintenance, currentUser);
+
         return deletedMaintenance;
+    }
+
+    private void sendMaintenanceDeletionNotification(Maintenance maintenance, User currentUser) {
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Eliminación de Mantenimiento";
+            String details = String.format(
+                "El mantenimiento %s para el equipo %s ha sido marcado como eliminado por %s",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                currentUser.getName()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                maintenance.getResponsible().getEmail(),
+                maintenance.getResponsible().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Maintenance deletion email sent to: {}", maintenance.getResponsible().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send maintenance deletion email to: {}", maintenance.getResponsible().getEmail(), e);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -341,84 +386,58 @@ public class MaintenanceService {
         return updatedMaintenance;
     }
 
-
-
-
-
-
-
     private void sendMaintenanceReviewRequestNotification(Maintenance maintenance, User reviewer, User creator) {
-        // Create a sent email record for the review request notification
-        SentEmail sentEmail = new SentEmail();
-        sentEmail.setSubject("Maintenance Review Request: " + maintenance.getCode());
-        sentEmail.setBody(createMaintenanceReviewRequestBody(maintenance, creator));
-        sentEmail.setUser(reviewer);
-        sentEmail.setCreatedAt(LocalDateTime.now());
-
-        sentEmailRepository.save(sentEmail);
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Solicitud de Revisión de Mantenimiento";
+            String details = String.format(
+                "El mantenimiento %s para el equipo %s ha sido enviado para revisión por %s. " +
+                "Por favor, revisa y aprueba o rechaza este mantenimiento.",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                creator.getName()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                reviewer.getEmail(),
+                reviewer.getName(),
+                action,
+                details
+            );
+            
+            logger.info("Maintenance review request email sent to: {}", reviewer.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send maintenance review request email to: {}", reviewer.getEmail(), e);
+        }
     }
-
-    private String createMaintenanceReviewRequestBody(Maintenance maintenance, User creator) {
-        return String.format(
-            "Dear %s,\n\n" +
-            "A maintenance request has been submitted for your review:\n\n" +
-            "Maintenance Code: %s\n" +
-            "Equipment: %s (Code: %s)\n" +
-            "Description: %s\n" +
-            "Maintenance Type: %s\n" +
-            "Priority: %s\n" +
-            "Responsible: %s\n" +
-            "Requested by: %s\n\n" +
-            "Please review and approve or reject this maintenance request.\n\n" +
-            "Best regards,\n" +
-            "Maintenance Management System",
-            maintenance.getReviewedBy() != null ? maintenance.getReviewedBy().getName() : "Administrator",
-            maintenance.getCode(),
-            maintenance.getEquipment().getName(),
-            maintenance.getEquipment().getCode(),
-            maintenance.getDescription(),
-            maintenance.getMaintenanceType().getName(),
-            maintenance.getPriority().name(),
-            maintenance.getResponsible().getName(),
-            creator.getName()
-        );
-    }
-
-
 
     private void sendMaintenanceAssignmentNotification(Maintenance maintenance, User responsible, User creator) {
-        // Create a sent email record for the maintenance assignment notification
-        SentEmail sentEmail = new SentEmail();
-        sentEmail.setSubject("New Maintenance Assignment: " + maintenance.getCode());
-        sentEmail.setBody(createMaintenanceAssignmentBody(maintenance, creator));
-        sentEmail.setUser(responsible);
-        sentEmail.setCreatedAt(LocalDateTime.now());
-
-        sentEmailRepository.save(sentEmail);
-    }
-
-    private String createMaintenanceAssignmentBody(Maintenance maintenance, User creator) {
-        return String.format(
-            "Dear %s,\n\n" +
-            "You have been assigned a new maintenance request:\n\n" +
-            "Maintenance Code: %s\n" +
-            "Equipment: %s (Code: %s)\n" +
-            "Description: %s\n" +
-            "Maintenance Type: %s\n" +
-            "Priority: %s\n" +
-            "Requested by: %s\n\n" +
-            "Please review and take necessary actions.\n\n" +
-            "Best regards,\n" +
-            "Maintenance Management System",
-            maintenance.getResponsible().getName(),
-            maintenance.getCode(),
-            maintenance.getEquipment().getName(),
-            maintenance.getEquipment().getCode(),
-            maintenance.getDescription(),
-            maintenance.getMaintenanceType().getName(),
-            maintenance.getPriority().name(),
-            creator.getName()
-        );
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Nueva Asignación de Mantenimiento";
+            String details = String.format(
+                "Se te ha asignado un nuevo mantenimiento: %s para el equipo %s. " +
+                "Tipo: %s, Prioridad: %s, Descripción: %s. " +
+                "Asignado por: %s",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                maintenance.getMaintenanceType().getName(),
+                maintenance.getPriority().name(),
+                maintenance.getDescription(),
+                creator.getName()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                responsible.getEmail(),
+                responsible.getName(),
+                action,
+                details
+            );
+            
+            logger.info("Maintenance assignment email sent to: {}", responsible.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send maintenance assignment email to: {}", responsible.getEmail(), e);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -585,70 +604,54 @@ public class MaintenanceService {
     }
 
     private void sendMaintenanceApprovalNotification(Maintenance maintenance, User reviewer) {
-        // Create a sent email record for the approval notification
-        SentEmail sentEmail = new SentEmail();
-        sentEmail.setSubject("Maintenance Approved: " + maintenance.getCode());
-        sentEmail.setBody(createMaintenanceApprovalBody(maintenance, reviewer));
-        sentEmail.setUser(maintenance.getResponsible());
-        sentEmail.setCreatedAt(LocalDateTime.now());
-
-        sentEmailRepository.save(sentEmail);
-    }
-
-    private String createMaintenanceApprovalBody(Maintenance maintenance, User reviewer) {
-        return String.format(
-            "Dear %s,\n\n" +
-            "Your maintenance request has been APPROVED:\n\n" +
-            "Maintenance Code: %s\n" +
-            "Equipment: %s (Code: %s)\n" +
-            "Description: %s\n" +
-            "Approved by: %s\n" +
-            "Approval Date: %s\n\n" +
-            "Your maintenance request has been approved and is ready to proceed.\n\n" +
-            "Best regards,\n" +
-            "Maintenance Management System",
-            maintenance.getResponsible().getName(),
-            maintenance.getCode(),
-            maintenance.getEquipment().getName(),
-            maintenance.getEquipment().getCode(),
-            maintenance.getDescription(),
-            reviewer.getName(),
-            maintenance.getReviewedAt()
-        );
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Mantenimiento Aprobado";
+            String details = String.format(
+                "Tu mantenimiento %s para el equipo %s ha sido APROBADO por %s. " +
+                "El mantenimiento está listo para proceder.",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                reviewer.getName()
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                maintenance.getResponsible().getEmail(),
+                maintenance.getResponsible().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Maintenance approval email sent to: {}", maintenance.getResponsible().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send maintenance approval email to: {}", maintenance.getResponsible().getEmail(), e);
+        }
     }
 
     private void sendMaintenanceRejectionNotification(Maintenance maintenance, User reviewer, String rejectionReason) {
-        // Create a sent email record for the rejection notification
-        SentEmail sentEmail = new SentEmail();
-        sentEmail.setSubject("Maintenance Rejected: " + maintenance.getCode());
-        sentEmail.setBody(createMaintenanceRejectionBody(maintenance, reviewer, rejectionReason));
-        sentEmail.setUser(maintenance.getResponsible());
-        sentEmail.setCreatedAt(LocalDateTime.now());
-
-        sentEmailRepository.save(sentEmail);
-    }
-
-    private String createMaintenanceRejectionBody(Maintenance maintenance, User reviewer, String rejectionReason) {
-        return String.format(
-            "Dear %s,\n\n" +
-            "Your maintenance request has been REJECTED:\n\n" +
-            "Maintenance Code: %s\n" +
-            "Equipment: %s (Code: %s)\n" +
-            "Description: %s\n" +
-            "Rejected by: %s\n" +
-            "Rejection Date: %s\n" +
-            "Rejection Reason: %s\n\n" +
-            "The maintenance has been returned to IN_PROGRESS status so you can make the necessary adjustments and submit it again for review.\n\n" +
-            "Best regards,\n" +
-            "Maintenance Management System",
-            maintenance.getResponsible().getName(),
-            maintenance.getCode(),
-            maintenance.getEquipment().getName(),
-            maintenance.getEquipment().getCode(),
-            maintenance.getDescription(),
-            reviewer.getName(),
-            maintenance.getReviewedAt(),
-            rejectionReason
-        );
+        // Send real email notification using ProductionEmailService
+        try {
+            String action = "Mantenimiento Rechazado";
+            String details = String.format(
+                "Tu mantenimiento %s para el equipo %s ha sido RECHAZADO por %s. " +
+                "Razón del rechazo: %s. " +
+                "El mantenimiento ha sido devuelto a estado IN_PROGRESS para que puedas hacer los ajustes necesarios.",
+                maintenance.getCode(),
+                maintenance.getEquipment().getName(),
+                reviewer.getName(),
+                rejectionReason
+            );
+            
+            productionEmailService.sendActionConfirmation(
+                maintenance.getResponsible().getEmail(),
+                maintenance.getResponsible().getName(),
+                action,
+                details
+            );
+            
+            logger.info("Maintenance rejection email sent to: {}", maintenance.getResponsible().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send maintenance rejection email to: {}", maintenance.getResponsible().getEmail(), e);
+        }
     }
 } 
