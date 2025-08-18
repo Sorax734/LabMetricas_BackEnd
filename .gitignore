@@ -51,10 +51,8 @@ src/main/resources/application-mysql.properties
 !src/main/resources/application-prod.properties
 
 # Mantener archivos de configuración de Render
-!.render-buildpacks.json
 !system.properties
 !Procfile
-!app.json
 
 # Elimina los test logs
 servicio_test.log.*.[0-9]
