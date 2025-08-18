@@ -4,13 +4,18 @@ services:
     env: java
     plan: starter
     region: oregon
-    buildCommand: chmod +x ./mvnw && ./mvnw clean package -DskipTests
+    buildCommand: |
+      apt-get update && apt-get install -y openjdk-17-jdk
+      chmod +x ./mvnw
+      ./mvnw clean package -DskipTests
     startCommand: java -jar target/LabMetricas-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: PORT
         value: 8080
+      - key: JAVA_HOME
+        value: /usr/lib/jvm/java-17-openjdk-amd64
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_USERNAME
