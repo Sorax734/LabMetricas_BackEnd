@@ -41,9 +41,14 @@ build/
 # Ignorar prueba específica
 src/test/java/com/labMetricas/LabMetricas/LabMetricasApplicationTests.java
 
-# Ignora el application propeties
+# Ignora archivos de configuración con datos sensibles
 src/main/resources/application.properties
 src/main/resources/application-dev.properties
+src/main/resources/application-postgres.properties
+src/main/resources/application-mysql.properties
+
+# Mantener archivos de configuración de producción (sin datos sensibles)
+!src/main/resources/application-prod.properties
 
 # Elimina los test logs
 servicio_test.log.*.[0-9]
