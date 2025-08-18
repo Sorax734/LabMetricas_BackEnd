@@ -20,11 +20,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class MaintenanceType {
     @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "UUID")
     private UUID id;
 
-    @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
+    @Column(name = "status", columnDefinition = "BOOLEAN", nullable = false)
     private Boolean status = true;
 
     @Column(name = "name", columnDefinition = "VARCHAR(50)", nullable = false, length = 50, unique = true)

@@ -28,11 +28,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Equipment {
     @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "UUID")
     private UUID id;
 
-    @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
+    @Column(name = "status", columnDefinition = "BOOLEAN", nullable = false)
     private Boolean status = true;
 
     @Column(name = "name", columnDefinition = "VARCHAR(100)", nullable = false, length = 100, unique = true)
@@ -44,7 +44,7 @@ public class Equipment {
     @Column(name = "serial_number", columnDefinition = "VARCHAR(24)", nullable = false, length = 24)
     private String serialNumber;
 
-    @Column(name = "location", columnDefinition = "TINYTEXT", nullable = false)
+    @Column(name = "location", columnDefinition = "TEXT", nullable = false)
     private String location;
 
     @Column(name = "brand", columnDefinition = "VARCHAR(50)", nullable = false, length = 50)
@@ -59,7 +59,7 @@ public class Equipment {
     @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
     @Column(name = "deleted_at", columnDefinition = "TIMESTAMP")

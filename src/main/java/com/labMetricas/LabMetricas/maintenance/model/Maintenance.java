@@ -22,11 +22,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Maintenance {
     @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "UUID")
     private UUID id;
 
-    @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
+    @Column(name = "status", columnDefinition = "BOOLEAN", nullable = false)
     private Boolean status = true;
 
     @Column(name = "description", columnDefinition = "VARCHAR(1000)", length = 1000)
@@ -38,19 +38,19 @@ public class Maintenance {
     @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
     @Column(name = "deleted_at", columnDefinition = "TIMESTAMP")
     private LocalDateTime deletedAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "priority", columnDefinition = "ENUM('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')")
+    @Column(name = "priority")
     private Priority priority = Priority.MEDIUM;
 
     // Nuevos campos para el flujo de aprobación
     @Enumerated(EnumType.STRING)
-    @Column(name = "review_status", columnDefinition = "ENUM('IN_PROGRESS', 'PENDING', 'APPROVED', 'REJECTED')")
+    @Column(name = "review_status")
     private ReviewStatus reviewStatus = ReviewStatus.IN_PROGRESS;
 
     @Column(name = "rejection_reason", columnDefinition = "VARCHAR(500)", length = 500)

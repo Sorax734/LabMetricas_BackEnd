@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "user", 
+@Table(name = "users", 
     indexes = {
         @Index(name = "user_name_index", columnList = "name"),
         @Index(name = "user_email_index", columnList = "email"),
@@ -36,8 +36,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class User implements UserDetails {
     @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "UUID")
     private UUID id;
 
     @Column(name = "name", columnDefinition = "VARCHAR(50)", nullable = false, length = 50)
@@ -56,7 +56,7 @@ public class User implements UserDetails {
     @Column(name = "phone", columnDefinition = "VARCHAR(10)", length = 10)
     private String phone;
 
-    @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
+    @Column(name = "status", columnDefinition = "BOOLEAN", nullable = false)
     private Boolean status = true;
 
     @ManyToOne
@@ -77,7 +77,7 @@ public class User implements UserDetails {
     @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "user")

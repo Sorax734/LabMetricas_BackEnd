@@ -22,8 +22,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Customer {
     @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "UUID")
     private UUID id;
 
     @Column(name = "name", columnDefinition = "VARCHAR(100)", nullable = false, length = 100)
@@ -35,7 +35,7 @@ public class Customer {
     @Column(name = "phone", columnDefinition = "VARCHAR(20)", nullable = true, length = 20)
     private String phone;
 
-    @Column(name = "status", columnDefinition = "TINYINT(1)", nullable = false)
+    @Column(name = "status", columnDefinition = "BOOLEAN", nullable = false)
     private Boolean status = true;
 
     @Column(name = "email", columnDefinition = "VARCHAR(50)", nullable = false, unique = true, length = 50)
@@ -48,6 +48,6 @@ public class Customer {
     @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
-    @Column(name = "last_modification", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    @Column(name = "last_modification", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime lastModification;
 } 
