@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - PORT=8080
+      - DATABASE_URL=jdbc:postgresql://dpg-d2h6u3gdl3ps738105v0-a.oregon-postgres.render.com:5432/postgres_lwez
+      - DATABASE_USERNAME=postgres_lwez_user
+      - DATABASE_PASSWORD=MxdUOgN0vUXuOJGG34eoNUSxDmFXFlHW
+      - JWT_SECRET=fX+zq1uV1W5zF0x2UEs6YT/NVzM/NvMjFd+5HdRZkEOLM7OaeZ0ND7eZc3B7RoJhI7Op9NGsWy0=
+      - RESEND_API_KEY=re_A5huTTus_4cDZumdqy68f7vkGUEmqjVQJ
+      - FRONTEND_URL=https://labmetricas.com.mx
+      - RESEND_DEFAULT_SENDER=noreply@labmetricas.com.mx
+      - RESEND_DOMAIN=labmetricas.com.mx
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

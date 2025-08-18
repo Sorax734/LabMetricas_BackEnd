@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+
+# Logs
+*.log
+*.log.*
+
+# Target directory
+target/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Documentation
+README.md
+HELP.md
+DEPLOYMENT.md
+DOMAIN_SETUP.md
+
+# Build scripts
+build.sh

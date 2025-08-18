@@ -54,6 +54,11 @@ src/main/resources/application-mysql.properties
 !system.properties
 !Procfile
 
+# Mantener archivos de Docker
+!Dockerfile
+!.dockerignore
+!docker-compose.yml
+
 # Elimina los test logs
 servicio_test.log.*.[0-9]
 servicio_test.log.*.gz
