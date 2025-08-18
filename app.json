@@ -1,0 +1,19 @@
+{
+  "name": "labmetricas-backend",
+  "description": "LabMetricas Backend API",
+  "repository": "https://github.com/Sorax734/LabMetricas_BackEnd",
+  "keywords": ["java", "spring-boot", "api"],
+  "env": {
+    "SPRING_PROFILES_ACTIVE": {
+      "value": "prod"
+    },
+    "PORT": {
+      "value": "8080"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-java"
+    }
+  ]
+}

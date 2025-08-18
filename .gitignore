@@ -54,6 +54,7 @@ src/main/resources/application-mysql.properties
 !.render-buildpacks.json
 !system.properties
 !Procfile
+!app.json
 
 # Elimina los test logs
 servicio_test.log.*.[0-9]
