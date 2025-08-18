@@ -50,6 +50,10 @@ src/main/resources/application-mysql.properties
 # Mantener archivos de configuración de producción (sin datos sensibles)
 !src/main/resources/application-prod.properties
 
+# Mantener archivos de configuración de Render
+!.render-buildpacks.json
+!system.properties
+
 # Elimina los test logs
 servicio_test.log.*.[0-9]
 servicio_test.log.*.gz
