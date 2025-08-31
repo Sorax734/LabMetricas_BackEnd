@@ -122,6 +122,7 @@ public class SecurityConfig {
             "http://localhost:3000",
             "http://localhost:5173", 
             "http://localhost:8080",
+            "https://lab-metricas-front-end-git-main-soras-projects-fe33a7ef.vercel.app",
             frontendUrl
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
